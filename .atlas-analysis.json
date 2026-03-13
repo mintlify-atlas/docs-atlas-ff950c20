@@ -1,0 +1,156 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "Gentle AI",
+  "projectDescription": "AI agent ecosystem configurator that supercharges Claude Code, OpenCode, Gemini CLI, Cursor, and VS Code Copilot with memory, skills, workflows, and MCP tools.",
+  "theme": "aspen",
+  "primaryColor": "#94cb04",
+  "lightColor": "#545454",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/what-it-does",
+              "concepts/architecture",
+              "concepts/components",
+              "concepts/agents"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/interactive-mode",
+              "guides/cli-mode",
+              "guides/presets",
+              "guides/skills",
+              "guides/personas",
+              "guides/backup-restore"
+            ]
+          },
+          {
+            "group": "Platform Support",
+            "pages": [
+              "platforms/overview",
+              "platforms/macos",
+              "platforms/linux",
+              "platforms/windows"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "CLI Reference",
+        "groups": [
+          {
+            "group": "Commands",
+            "pages": [
+              "cli/install",
+              "cli/update",
+              "cli/version"
+            ]
+          },
+          {
+            "group": "Options",
+            "pages": [
+              "cli/flags",
+              "cli/presets",
+              "cli/dry-run"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Components",
+        "groups": [
+          {
+            "group": "Ecosystem",
+            "pages": [
+              "components/engram",
+              "components/sdd",
+              "components/skills",
+              "components/context7",
+              "components/persona",
+              "components/permissions",
+              "components/gga",
+              "components/theme"
+            ]
+          },
+          {
+            "group": "Skills Library",
+            "pages": [
+              "skills/overview",
+              "skills/sdd-workflow",
+              "skills/foundation",
+              "skills/creating-skills"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Agents",
+        "groups": [
+          {
+            "group": "Supported Agents",
+            "pages": [
+              "agents/overview",
+              "agents/claude-code",
+              "agents/opencode",
+              "agents/gemini-cli",
+              "agents/cursor",
+              "agents/vscode-copilot"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Contributing",
+            "pages": [
+              "development/overview",
+              "development/architecture",
+              "development/testing",
+              "development/building"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Cross-platform AI agent configurator (macOS, Linux, Windows)",
+    "Interactive Bubbletea TUI with Rose Pine theme",
+    "Supports 5 major AI coding agents (Claude Code, OpenCode, Gemini CLI, Cursor, VS Code Copilot)",
+    "Engram persistent cross-session memory",
+    "9-phase SDD (Spec-Driven Development) workflow orchestration",
+    "11 curated coding skill files (SDD + foundation)",
+    "Context7 MCP server for live framework documentation",
+    "GGA (Gentleman Guardian Angel) AI provider switcher",
+    "4 presets (full-gentleman, ecosystem-only, minimal, custom)",
+    "3 persona modes (gentleman, neutral, custom)",
+    "Platform-aware dependency detection and management",
+    "Atomic backup/restore with rollback support",
+    "CLI and interactive modes with dry-run capability"
+  ],
+  "publicApiSurface": [
+    "gentle-ai (TUI mode)",
+    "gentle-ai install --agent <agents> --preset <preset>",
+    "gentle-ai install --agent <agents> --component <components> --skill <skills> --persona <persona>",
+    "gentle-ai install --dry-run",
+    "gentle-ai update",
+    "gentle-ai version"
+  ]
+}
