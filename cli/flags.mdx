@@ -1,0 +1,365 @@
+---
+title: 'CLI Flags Reference'
+description: 'Complete reference for all gentle-ai command-line flags'
+---
+
+## Overview
+
+This page documents all command-line flags supported by `gentle-ai install`.
+
+## Agent Selection
+
+### --agent, --agents
+
+**Type:** `string` (comma-separated list)  
+**Default:** Auto-detected from config directories  
+**Required:** No
+
+Specify which AI agents to configure.
+
+```bash
+gentle-ai install --agent claude-code
+gentle-ai install --agents claude-code,opencode,gemini-cli
+```
+
+**Valid values:**
+- `claude-code` - Claude Code (config: `~/.claude`)
+- `opencode` - OpenCode (config: `~/.config/opencode`)
+- `gemini-cli` - Gemini CLI (config: `~/.gemini`)
+- `cursor` - Cursor (config: `~/.cursor`)
+- `vscode-copilot` - VS Code Copilot (config: `~/.copilot` + `~/Library/Application Support/Code/User`)
+
+**Auto-detection logic:**
+
+If `--agent` is not provided, gentle-ai scans for existing agent config directories:
+
+```go
+// internal/cli/validate.go:144
+func defaultAgentsFromDetection(detection system.DetectionResult) []model.AgentID {
+    agents := []model.AgentID{}
+    for _, state := range detection.Configs {
+        if !state.Exists {
+            continue
+        }
+        // Add detected agents
+    }
+    if len(agents) > 0 {
+        return agents
+    }
+    // Fallback: return all agents
+    return catalog.AllAgents()
+}
+```
+
+Source: `internal/cli/validate.go:144`
+
+## Component Selection
+
+### --component, --components
+
+**Type:** `string` (comma-separated list)  
+**Default:** Determined by `--preset`  
+**Required:** No
+
+Specify which ecosystem components to install.
+
+```bash
+gentle-ai install --component engram,sdd,skills
+```
+
+**Valid values:**
+- `engram` - Persistent cross-session memory
+- `sdd` - Spec-Driven Development workflow
+- `skills` - Curated coding skill library
+- `context7` - MCP server for live framework docs
+- `persona` - Gentleman, neutral, or custom behavior
+- `permissions` - Security-first defaults and guardrails
+- `gga` - Gentleman Guardian Angel AI provider switcher
+- `theme` - Gentleman Kanagawa theme overlay
+
+**Validation:**
+
+Components are validated against the catalog:
+
+```go
+// internal/cli/validate.go:79
+func normalizeComponents(values []string, preset model.PresetID) ([]model.ComponentID, error) {
+    allowed := map[model.ComponentID]struct{}{}
+    for _, component := range catalog.MVPComponents() {
+        allowed[component.ID] = struct{}{}
+    }
+    // Validate each component
+}
+```
+
+Source: `internal/cli/validate.go:79`
+
+## Skill Selection
+
+### --skill, --skills
+
+**Type:** `string` (comma-separated list)  
+**Default:** Determined by `--preset`  
+**Required:** No
+
+Specify which skills to install.
+
+```bash
+gentle-ai install --skill sdd-init,go-testing,skill-creator
+```
+
+**Valid values:**
+
+**SDD Skills (P0):**
+- `sdd-init` - Bootstrap SDD context
+- `sdd-explore` - Investigate codebase
+- `sdd-propose` - Create change proposal
+- `sdd-spec` - Write specifications
+- `sdd-design` - Technical design
+- `sdd-tasks` - Break down tasks
+- `sdd-apply` - Implement tasks
+- `sdd-verify` - Validate implementation
+- `sdd-archive` - Archive completed work
+
+**Foundation Skills (P0):**
+- `go-testing` - Go testing patterns
+- `skill-creator` - Create new skills
+
+Source: `internal/catalog/skills.go:12`
+
+## Preset Configuration
+
+### --preset
+
+**Type:** `string`  
+**Default:** `full-gentleman`  
+**Required:** No
+
+Apply a predefined configuration preset.
+
+```bash
+gentle-ai install --preset ecosystem-only
+```
+
+**Valid values:**
+
+| Preset | Components | Skills | Persona |
+|--------|-----------|--------|--------|
+| `full-gentleman` | All 8 components | All 11 skills | gentleman |
+| `ecosystem-only` | engram, sdd, skills, context7, gga | P0 skills (11) | gentleman |
+| `minimal` | engram | None | gentleman |
+| `custom` | Manual via `--component` | Manual via `--skill` | Manual via `--persona` |
+
+**Component mapping:**
+
+```go
+// internal/cli/validate.go:123
+func componentsForPreset(preset model.PresetID) []model.ComponentID {
+    switch preset {
+    case model.PresetMinimal:
+        return []model.ComponentID{model.ComponentEngram}
+    case model.PresetEcosystemOnly:
+        return []model.ComponentID{model.ComponentEngram, model.ComponentSDD, ...}
+    case model.PresetCustom:
+        return nil
+    default: // full-gentleman
+        return []model.ComponentID{...} // all 8
+    }
+}
+```
+
+Source: `internal/cli/validate.go:123`
+
+## Persona Selection
+
+### --persona
+
+**Type:** `string`  
+**Default:** `gentleman`  
+**Required:** No
+
+Set the agent's persona mode.
+
+```bash
+gentle-ai install --persona neutral
+```
+
+**Valid values:**
+- `gentleman` - Teaching-oriented mentor, pushes back on bad practices
+- `neutral` - Clean, professional tone, no personality
+- `custom` - Bring your own persona instructions
+
+**Validation:**
+
+```go
+// internal/cli/validate.go:53
+func normalizePersona(value string) (model.PersonaID, error) {
+    if strings.TrimSpace(value) == "" {
+        return model.PersonaGentleman, nil
+    }
+    switch model.PersonaID(value) {
+    case model.PersonaGentleman, model.PersonaNeutral, model.PersonaCustom:
+        return model.PersonaID(value), nil
+    default:
+        return "", fmt.Errorf("unsupported persona %q", value)
+    }
+}
+```
+
+Source: `internal/cli/validate.go:53`
+
+## Dry Run Mode
+
+### --dry-run
+
+**Type:** `boolean`  
+**Default:** `false`  
+**Required:** No
+
+Preview the install plan without applying changes.
+
+```bash
+gentle-ai install --dry-run --agent claude-code --preset full-gentleman
+```
+
+**Output:**
+
+```
+AI Gentle Stack dry-run
+=====================
+Agents: claude-code
+Unsupported agents: none
+Persona: gentleman
+Preset: full-gentleman
+Components order: engram,sdd,skills,context7,persona,permissions,gga
+Auto-added dependencies: none
+Platform decision: os=darwin distro=n/a package-manager=brew status=supported
+Prepare steps: 2
+Apply steps: 8
+
+Dependency Report
+=================
+[✓] git       2.39.0   (required)
+[✓] curl      7.88.1   (required)
+[✓] node      20.11.0  (required for context7)
+[✓] npm       10.2.4   (required for context7)
+[✓] brew      4.2.5    (optional)
+```
+
+**Source:**
+
+```go
+// internal/cli/run.go:88
+if input.DryRun {
+    return result, nil
+}
+```
+
+Source: `internal/cli/run.go:88`
+
+## Flag Aliases
+
+Several flags support both singular and plural forms:
+
+| Primary | Alias |
+|---------|-------|
+| `--agent` | `--agents` |
+| `--component` | `--components` |
+| `--skill` | `--skills` |
+
+**Implementation:**
+
+```go
+// internal/cli/install.go:23
+registerListFlag(fs, "agent", &opts.Agents)
+registerListFlag(fs, "agents", &opts.Agents)
+registerListFlag(fs, "component", &opts.Components)
+registerListFlag(fs, "components", &opts.Components)
+registerListFlag(fs, "skill", &opts.Skills)
+registerListFlag(fs, "skills", &opts.Skills)
+```
+
+Source: `internal/cli/install.go:23`
+
+## Comma-Separated Lists
+
+List flags accept comma-separated values with optional whitespace:
+
+```bash
+# All valid
+gentle-ai install --agent claude-code,opencode
+gentle-ai install --agent "claude-code, opencode"
+gentle-ai install --agent claude-code --agent opencode
+```
+
+**Parsing logic:**
+
+```go
+// internal/cli/install.go:56
+func (f csvListFlag) Set(value string) error {
+    for _, part := range strings.Split(value, ",") {
+        item := strings.TrimSpace(part)
+        if item == "" {
+            continue
+        }
+        *f.values = append(*f.values, item)
+    }
+    return nil
+}
+```
+
+Source: `internal/cli/install.go:56`
+
+## Error Handling
+
+Invalid flags produce actionable error messages:
+
+```bash
+$ gentle-ai install --agent invalid-agent
+Error: agent "invalid-agent" is not supported
+
+$ gentle-ai install --preset unknown
+Error: unsupported preset "unknown"
+
+$ gentle-ai install extra-arg
+Error: unexpected install argument "extra-arg"
+```
+
+**Source:**
+
+```go
+// internal/cli/install.go:37
+if fs.NArg() > 0 {
+    return InstallFlags{}, fmt.Errorf("unexpected install argument %q", fs.Arg(0))
+}
+```
+
+Source: `internal/cli/install.go:37`
+
+## Environment Variables
+
+Flags take precedence over environment variables. Some components respect additional env vars:
+
+| Variable | Component | Purpose |
+|----------|-----------|--------|
+| `ENGRAM_SETUP_MODE` | engram | Control auto-setup: `all`, `auto`, `manual` |
+| `ENGRAM_SETUP_STRICT` | engram | Fail on setup errors: `true`, `false` |
+
+See [Engram documentation](/components/engram) for details.
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Install Command" icon="download" href="/cli/install">
+    Full install command reference
+  </Card>
+  <Card title="Presets" icon="layer-group" href="/cli/presets">
+    Preset configuration guide
+  </Card>
+  <Card title="Dry Run" icon="eye" href="/cli/dry-run">
+    Preview install plans
+  </Card>
+  <Card title="Components" icon="puzzle-piece" href="/concepts/components">
+    Component documentation
+  </Card>
+</CardGroup>

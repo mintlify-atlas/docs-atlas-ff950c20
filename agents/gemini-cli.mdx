@@ -1,0 +1,283 @@
+---
+title: "Gemini CLI"
+description: "Google's CLI agent with experimental sub-agent support and settings-based MCP"
+---
+
+Gemini CLI is Google's command-line AI agent with full Gentle AI ecosystem support, including skills, MCP servers, and experimental sub-agent delegation.
+
+## Support Tier
+
+**Full** — Gemini CLI receives the complete SDD orchestrator, skill files, MCP integration, and system prompt injection. Sub-agent support is experimental.
+
+## Configuration Paths
+
+### Primary Config Directory
+```bash
+~/.gemini/
+```
+
+### File Locations
+
+| Purpose | Path |
+|---------|------|
+| System Prompt | `~/.gemini/GEMINI.md` |
+| Skills Directory | `~/.gemini/skills/` |
+| Settings File | `~/.gemini/settings.json` |
+| MCP Configs | Merged into `settings.json` |
+| Sub-agents | `~/.gemini/agents/` (experimental) |
+
+### Windows Paths
+```powershell
+%USERPROFILE%\.gemini\GEMINI.md
+%USERPROFILE%\.gemini\skills\sdd-init.md
+%USERPROFILE%\.gemini\settings.json
+```
+
+## Configuration Strategies
+
+### System Prompt: File Replace
+
+Gemini CLI uses **complete file replacement** for system prompts. Gentle AI overwrites `GEMINI.md` with the full Gentle AI system prompt.
+
+**Path:** `~/.gemini/GEMINI.md`
+
+<Warning>
+User customizations to `GEMINI.md` will be overwritten. Back up custom instructions before running Gentle AI.
+</Warning>
+
+### MCP: Merge Into Settings
+
+Gemini CLI merges MCP server configurations into `settings.json` under the `mcpServers` key.
+
+**Example: settings.json with MCP servers**
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@context-labs/mcp-server-context7"],
+      "env": {
+        "CONTEXT7_API_KEY": "your-api-key"
+      }
+    },
+    "engram": {
+      "command": "npx",
+      "args": ["-y", "@gentleman-programming/mcp-server-engram"],
+      "env": {}
+    }
+  },
+  "experimental": {
+    "enableAgents": true
+  }
+}
+```
+
+<Info>
+Set `experimental.enableAgents: true` in `settings.json` to enable sub-agent support.
+</Info>
+
+## Capabilities
+
+### Skills ✅
+
+Skills are written to `~/.gemini/skills/` as markdown files:
+
+```bash
+~/.gemini/skills/
+├── sdd-init.md
+├── sdd-explore.md
+├── sdd-propose.md
+├── sdd-spec.md
+├── sdd-design.md
+├── sdd-tasks.md
+├── sdd-apply.md
+├── sdd-verify.md
+├── sdd-archive.md
+├── go-testing.md
+└── skill-creator.md
+```
+
+### MCP Servers ✅
+
+MCP servers are merged into `settings.json`. Gentle AI configures:
+
+- **Context7** — Live framework/library documentation
+- **Engram** — Persistent cross-session memory
+
+### Sub-agents ⚠️ Experimental
+
+Gemini CLI supports **experimental** sub-agent delegation. You must enable it in `settings.json`:
+
+```json
+{
+  "experimental": {
+    "enableAgents": true
+  }
+}
+```
+
+Custom sub-agents are defined as markdown files in `~/.gemini/agents/`.
+
+<Warning>
+Sub-agent support is experimental and may change in future Gemini CLI releases.
+</Warning>
+
+### Slash Commands ❌
+
+Gemini CLI does not support slash commands. Use OpenCode if you need slash command support.
+
+### Output Styles ❌
+
+Gemini CLI does not support custom output styles. Use Claude Code if you need output style support.
+
+## Installation
+
+### Auto-Install Support ✅
+
+Gentle AI can automatically install Gemini CLI via npm global install.
+
+**Detection Method:** Checks for `gemini` binary on PATH.
+
+### Installation Commands (by Platform)
+
+<Tabs>
+  <Tab title="macOS">
+    ```bash
+    # NPM global install
+    npm install -g @google/gemini-cli
+    
+    # Or install via gentle-ai
+    gentle-ai install --agent gemini-cli
+    ```
+  </Tab>
+  
+  <Tab title="Linux (Debian/Ubuntu)">
+    ```bash
+    # NPM global install
+    npm install -g @google/gemini-cli
+    
+    # Or install via gentle-ai (may require sudo)
+    gentle-ai install --agent gemini-cli
+    ```
+  </Tab>
+  
+  <Tab title="Linux (Arch)">
+    ```bash
+    # NPM global install
+    npm install -g @google/gemini-cli
+    
+    # Or install via gentle-ai
+    gentle-ai install --agent gemini-cli
+    ```
+  </Tab>
+  
+  <Tab title="Windows">
+    ```powershell
+    # NPM global install
+    npm install -g @google/gemini-cli
+    
+    # Or install via gentle-ai
+    gentle-ai.exe install --agent gemini-cli
+    ```
+  </Tab>
+</Tabs>
+
+<Info>
+On Linux systems where npm global directories are not user-writable, Gentle AI will use `sudo npm install -g`.
+</Info>
+
+## Example Configuration
+
+### Full Gentleman Preset
+
+```bash
+gentle-ai install \
+  --agent gemini-cli \
+  --preset full-gentleman
+```
+
+This installs:
+- ✅ All SDD skills (9 files)
+- ✅ Foundation skills (go-testing, skill-creator)
+- ✅ Context7 + Engram MCP servers
+- ✅ Gentleman persona
+- ✅ Permissions + security defaults
+- ✅ GGA integration (optional)
+
+### Ecosystem Only
+
+```bash
+gentle-ai install \
+  --agent gemini-cli \
+  --preset ecosystem-only
+```
+
+This installs:
+- ✅ P0 skills only (critical SDD workflow)
+- ✅ Context7 + Engram MCP servers
+- ✅ Gentleman persona
+- ✅ Permissions + security defaults
+
+### With Experimental Sub-agents
+
+```bash
+gentle-ai install \
+  --agent gemini-cli \
+  --preset full-gentleman
+```
+
+Then manually enable experimental features in `~/.gemini/settings.json`:
+```json
+{
+  "experimental": {
+    "enableAgents": true
+  }
+}
+```
+
+## Implementation Details
+
+**Source Code:** `internal/agents/gemini/adapter.go`
+
+**Agent ID:** `gemini-cli`
+
+**Support Tier:** `TierFull`
+
+**System Prompt Strategy:** `StrategyFileReplace`
+
+**MCP Strategy:** `StrategyMergeIntoSettings`
+
+## Platform-Specific Notes
+
+### Linux npm Permissions
+
+On some Linux distributions, npm global directories are not user-writable. Gentle AI handles this automatically:
+
+```go
+// internal/agents/gemini/adapter.go:69-72
+if profile.OS == "linux" && !profile.NpmWritable {
+    return [][]string{{"sudo", "npm", "install", "-g", "@google/gemini-cli"}}, nil
+}
+return [][]string{{"npm", "install", "-g", "@google/gemini-cli"}}, nil
+```
+
+<Info>
+Gentle AI auto-detects whether npm global directories are writable and uses `sudo` only when necessary.
+</Info>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation Guide" icon="download" href="/installation">
+    Install Gentle AI and configure Gemini CLI
+  </Card>
+  <Card title="Components" icon="cube" href="/components/engram">
+    Learn about the Gentle AI component ecosystem
+  </Card>
+  <Card title="Skills" icon="brain" href="/components/skills">
+    Explore SDD and foundation skills
+  </Card>
+  <Card title="MCP Servers" icon="plug" href="/components/context7">
+    Configure Context7 and Engram
+  </Card>
+</CardGroup>

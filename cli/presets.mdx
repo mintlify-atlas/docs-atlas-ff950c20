@@ -1,0 +1,344 @@
+---
+title: 'Configuration Presets'
+description: 'Predefined configurations for different use cases'
+---
+
+## Overview
+
+Presets are predefined configurations that bundle components, skills, and persona settings for common use cases. They simplify installation by selecting sensible defaults.
+
+## Available Presets
+
+<CardGroup cols={2}>
+  <Card title="Full Gentleman" icon="star" href="#full-gentleman">
+    Complete ecosystem with all features
+  </Card>
+  <Card title="Ecosystem Only" icon="layer-group" href="#ecosystem-only">
+    Core SDD workflow without extras
+  </Card>
+  <Card title="Minimal" icon="minimize" href="#minimal">
+    Memory-only lightweight setup
+  </Card>
+  <Card title="Custom" icon="sliders" href="#custom">
+    Manual component selection
+  </Card>
+</CardGroup>
+
+## Full Gentleman
+
+**Preset ID:** `full-gentleman`  
+**Default:** Yes
+
+The complete Gentleman AI experience with all components, all skills, and the teaching-oriented persona.
+
+### What's Included
+
+**Components (8):**
+- Engram - Persistent memory
+- SDD - Spec-Driven Development
+- Skills - Skill library
+- Context7 - Live framework docs
+- Persona - Gentleman mode
+- Permissions - Security guardrails
+- GGA - AI provider switcher
+- Theme - Kanagawa theme (future)
+
+**Skills (11):**
+- **SDD Workflow (9):** sdd-init, sdd-explore, sdd-propose, sdd-spec, sdd-design, sdd-tasks, sdd-apply, sdd-verify, sdd-archive
+- **Foundation (2):** go-testing, skill-creator
+
+**Persona:** Gentleman (teaching-oriented mentor)
+
+### Usage
+
+```bash
+gentle-ai install --preset full-gentleman
+```
+
+Or simply:
+
+```bash
+gentle-ai install
+```
+
+### When to Use
+
+- **First-time users** - Get the full experience
+- **Production workflows** - Maximum capabilities
+- **Teaching environments** - Learning-focused persona
+- **Multi-agent setups** - Configure all your agents at once
+
+### Configuration Paths
+
+For each agent, the preset installs:
+
+```bash
+# Example: Claude Code on macOS
+~/.claude/
+├── CLAUDE.md                          # System prompt (SDD + Persona)
+├── mcp/
+│   ├── engram.json                    # Engram MCP server
+│   └── context7.json                  # Context7 MCP server
+├── skills/
+│   ├── _shared/
+│   │   ├── persistence-contract.md
+│   │   ├── engram-convention.md
+│   │   └── openspec-convention.md
+│   ├── sdd-init/SKILL.md
+│   ├── sdd-explore/SKILL.md
+│   ├── ... (9 SDD skills)
+│   ├── go-testing/SKILL.md
+│   └── skill-creator/SKILL.md
+├── output-styles/
+│   └── gentleman.md                   # Output style template
+└── settings.json                      # Permissions + Theme
+```
+
+## Ecosystem Only
+
+**Preset ID:** `ecosystem-only`
+
+Core SDD workflow components without persona/permissions/theme. Same skills as full-gentleman.
+
+### What's Included
+
+**Components (5):**
+- Engram
+- SDD
+- Skills
+- Context7
+- GGA
+
+**Skills (11):**  
+All P0 skills (same as full-gentleman)
+
+**Persona:** Gentleman (but no persona component injection)
+
+### Usage
+
+```bash
+gentle-ai install --preset ecosystem-only
+```
+
+### When to Use
+
+- **Existing persona** - You have custom system prompts
+- **No permissions changes** - Keep your existing settings
+- **SDD-focused** - Want the workflow without extras
+- **Lighter installation** - Skip non-essential components
+
+### What's Different
+
+Compared to full-gentleman, ecosystem-only **excludes:**
+- No persona injection to system prompts
+- No permissions settings
+- No theme configuration
+
+You still get:
+- Full SDD orchestrator in system prompt
+- All 9 SDD skills + 2 foundation skills
+- Engram memory
+- Context7 MCP server
+- GGA provider switcher
+
+## Minimal
+
+**Preset ID:** `minimal`
+
+Lightweight memory-only setup. Just Engram with no workflow components.
+
+### What's Included
+
+**Components (1):**
+- Engram only
+
+**Skills:** None
+
+**Persona:** Gentleman (but no persona component injection)
+
+### Usage
+
+```bash
+gentle-ai install --preset minimal
+```
+
+### When to Use
+
+- **Memory only** - Just want persistent context
+- **Existing workflow** - Have your own processes
+- **Experimenting** - Test Engram before full adoption
+- **Resource constraints** - Minimal disk/config footprint
+
+### What's Included
+
+For each agent:
+
+```bash
+# Example: OpenCode
+~/.config/opencode/
+├── settings.json                      # MCP server config (merged)
+└── (system prompt unchanged)
+```
+
+Engram MCP server is configured, but no SDD skills or system prompt modifications.
+
+## Custom
+
+**Preset ID:** `custom`
+
+Manual selection of components, skills, and persona. No defaults applied.
+
+### What's Included
+
+Nothing by default. You must specify:
+- `--component` for components
+- `--skill` for skills
+- `--persona` for persona mode
+
+### Usage
+
+```bash
+gentle-ai install --preset custom \
+  --component engram,sdd,skills \
+  --skill sdd-init,sdd-apply,go-testing \
+  --persona neutral
+```
+
+### When to Use
+
+- **Specific needs** - Only want certain components
+- **Selective skills** - Don't need full SDD workflow
+- **Custom persona** - Using your own instructions
+- **Incremental adoption** - Add components over time
+
+### Examples
+
+#### SDD workflow only (no memory)
+
+```bash
+gentle-ai install --preset custom \
+  --component sdd,skills \
+  --skill sdd-init,sdd-explore,sdd-propose,sdd-spec,sdd-apply
+```
+
+#### Memory + testing skill
+
+```bash
+gentle-ai install --preset custom \
+  --component engram,skills \
+  --skill go-testing
+```
+
+#### Context7 + GGA only
+
+```bash
+gentle-ai install --preset custom \
+  --component context7,gga
+```
+
+## Preset Comparison
+
+| Feature | Full Gentleman | Ecosystem Only | Minimal | Custom |
+|---------|---------------|---------------|---------|--------|
+| Engram | ✓ | ✓ | ✓ | Manual |
+| SDD | ✓ | ✓ | ✗ | Manual |
+| Skills | All (11) | All (11) | ✗ | Manual |
+| Context7 | ✓ | ✓ | ✗ | Manual |
+| Persona | ✓ | ✗ | ✗ | Manual |
+| Permissions | ✓ | ✗ | ✗ | Manual |
+| GGA | ✓ | ✓ | ✗ | Manual |
+| Theme | ✓ | ✗ | ✗ | Manual |
+| **Total components** | 8 | 5 | 1 | 0-8 |
+| **Total skills** | 11 | 11 | 0 | 0-11 |
+
+## Source Code
+
+Preset logic is implemented in `internal/cli/validate.go`:
+
+```go
+func componentsForPreset(preset model.PresetID) []model.ComponentID {
+    switch preset {
+    case model.PresetMinimal:
+        return []model.ComponentID{model.ComponentEngram}
+    case model.PresetEcosystemOnly:
+        return []model.ComponentID{
+            model.ComponentEngram,
+            model.ComponentSDD,
+            model.ComponentSkills,
+            model.ComponentContext7,
+            model.ComponentGGA,
+        }
+    case model.PresetCustom:
+        return nil
+    default: // PresetFullGentleman
+        return []model.ComponentID{
+            model.ComponentEngram,
+            model.ComponentSDD,
+            model.ComponentSkills,
+            model.ComponentContext7,
+            model.ComponentPersona,
+            model.ComponentPermission,
+            model.ComponentGGA,
+        }
+    }
+}
+```
+
+Source: `internal/cli/validate.go:123`
+
+## Overriding Presets
+
+You can override preset defaults with explicit flags:
+
+```bash
+# Start with full-gentleman, but use neutral persona
+gentle-ai install --preset full-gentleman --persona neutral
+
+# Start with ecosystem-only, but add permissions
+gentle-ai install --preset ecosystem-only --component engram,sdd,skills,context7,gga,permissions
+
+# Start with minimal, but add specific skills
+gentle-ai install --preset minimal --component engram,skills --skill go-testing
+```
+
+Explicit flags always take precedence over preset defaults.
+
+## Dry Run
+
+Preview what a preset will install:
+
+```bash
+gentle-ai install --dry-run --preset full-gentleman
+```
+
+Output:
+
+```
+AI Gentle Stack dry-run
+=====================
+Agents: claude-code,opencode
+Persona: gentleman
+Preset: full-gentleman
+Components order: engram,sdd,skills,context7,persona,permissions,gga
+Prepare steps: 2
+Apply steps: 9
+```
+
+See [dry-run documentation](/cli/dry-run) for details.
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Install Command" icon="download" href="/cli/install">
+    Install command reference
+  </Card>
+  <Card title="Flags Reference" icon="flag" href="/cli/flags">
+    All CLI flags
+  </Card>
+  <Card title="Components" icon="puzzle-piece" href="/concepts/components">
+    Component documentation
+  </Card>
+  <Card title="Skills" icon="book" href="/skills/overview">
+    Skills library guide
+  </Card>
+</CardGroup>

@@ -1,0 +1,496 @@
+---
+title: CLI Mode
+description: Master the command-line interface for scripted installations
+---
+
+## Overview
+
+CLI mode provides a non-interactive way to configure Gentle AI using command-line flags. Perfect for:
+
+- **Scripted installations** — Automate setups in dotfiles or CI
+- **Repeatable configurations** — Document exact component selections
+- **Dry-run previews** — Test configurations without applying changes
+- **Remote installations** — Configure over SSH without TUI rendering issues
+
+## Basic Usage
+
+The `install` command accepts flags to specify configuration:
+
+```bash
+gentle-ai install [flags]
+```
+
+### Required Flags
+
+At least one of these must be specified:
+
+- `--agent` / `--agents` — Comma-separated list of agents to configure
+- `--preset` — Preset name (implies agents and components)
+
+<Warning>
+You must provide either `--agent` or `--preset` (or both). Running `gentle-ai install` with no flags will fail.
+</Warning>
+
+## Command Reference
+
+### Agent Selection
+
+Specify which agents to configure:
+
+```bash
+# Single agent
+gentle-ai install --agent claude-code --preset full-gentleman
+
+# Multiple agents (both flag names work)
+gentle-ai install --agents claude-code,opencode,gemini-cli --preset full-gentleman
+```
+
+**Available agents**:
+- `claude-code` — Claude Code (`~/.claude`)
+- `opencode` — OpenCode (`~/.config/opencode`)
+- `gemini-cli` — Gemini CLI (`~/.gemini`)
+- `cursor` — Cursor (`~/.cursor`)
+- `vscode-copilot` — VS Code Copilot (`~/.copilot` + VS Code User)
+
+<Tip>
+Both `--agent` and `--agents` work identically. Use whichever reads better.
+</Tip>
+
+### Preset Selection
+
+Choose a preset configuration:
+
+```bash
+gentle-ai install --agent claude-code --preset full-gentleman
+```
+
+**Available presets**:
+
+<Tabs>
+  <Tab title="full-gentleman">
+    **Complete ecosystem with all features**
+    
+    Installs:
+    - All 8 components (engram, sdd, skills, context7, persona, permissions, gga, theme)
+    - All 11 skills (9 SDD + 2 foundation)
+    - Gentleman persona
+    
+    Use case: Recommended for most users
+  </Tab>
+  
+  <Tab title="ecosystem-only">
+    **Core workflow without extras**
+    
+    Installs:
+    - 5 core components (engram, sdd, skills, context7, gga)
+    - 11 P0 skills (9 SDD + 2 foundation)
+    - Gentleman persona
+    
+    Use case: SDD workflow focused, skips permissions and theme
+  </Tab>
+  
+  <Tab title="minimal">
+    **Lightweight setup**
+    
+    Installs:
+    - 3 essential components (engram, persona, permissions)
+    - No skills
+    - Gentleman persona
+    
+    Use case: Memory and security only, no workflow
+  </Tab>
+  
+  <Tab title="custom">
+    **Manual component selection**
+    
+    Requires:
+    - `--component` flag to specify components
+    - Optional `--skill` flag for skills
+    - Optional `--persona` flag for persona mode
+    
+    Use case: Advanced users who want full control
+  </Tab>
+</Tabs>
+
+### Custom Configuration
+
+With `--preset custom`, specify components individually:
+
+```bash
+gentle-ai install \
+  --agent claude-code \
+  --preset custom \
+  --component engram,sdd,skills,context7 \
+  --skill go-testing,skill-creator \
+  --persona gentleman
+```
+
+**Component flags**:
+- `--component` / `--components` — Comma-separated list of components
+
+**Available components**:
+- `engram` — Persistent cross-session memory
+- `sdd` — Spec-Driven Development workflow
+- `skills` — Curated coding skill library
+- `context7` — MCP server for live documentation
+- `persona` — Behavior and teaching mode
+- `permissions` — Security-first guardrails
+- `gga` — AI provider switcher
+- `theme` — Gentleman Kanagawa theme overlay
+
+**Skill flags**:
+- `--skill` / `--skills` — Comma-separated list of skills
+
+**Available skills**:
+- SDD: `sdd-init`, `sdd-explore`, `sdd-propose`, `sdd-spec`, `sdd-design`, `sdd-tasks`, `sdd-apply`, `sdd-verify`, `sdd-archive`
+- Foundation: `go-testing`, `skill-creator`
+
+<Info>
+The planner automatically resolves dependencies. Selecting `skills` will also install `engram` and `sdd`.
+</Info>
+
+### Persona Selection
+
+```bash
+gentle-ai install --agent claude-code --preset custom --persona neutral
+```
+
+**Available personas**:
+- `gentleman` — Teaching-oriented mentor (default)
+- `neutral` — Clean, professional tone
+- `custom` — Bring your own persona (requires manual config after install)
+
+### Dry Run
+
+Preview the installation plan without applying changes:
+
+```bash
+gentle-ai install --dry-run \
+  --agent claude-code,opencode \
+  --preset full-gentleman
+```
+
+**Output includes**:
+- System detection results
+- Resolved components and dependencies
+- Install order
+- Missing dependencies
+- Commands that would be executed
+
+<Accordion title="Example Dry Run Output">
+```text
+Dry Run: Installation Plan
+
+System Detection:
+  OS: darwin (arm64)
+  Package Manager: brew
+  Supported: Yes
+
+Agents to Configure:
+  • claude-code (~/.claude)
+  • opencode (~/.config/opencode)
+
+Dependency Resolution:
+  Input: [engram, sdd, skills, context7, persona, permissions, gga]
+  Resolved: [engram, sdd, skills, context7, persona, permissions, gga]
+  Order: [engram, sdd, skills, context7, persona, permissions, gga]
+
+Missing Dependencies:
+  (none)
+
+Pipeline Plan:
+  Prepare:
+    1. Check dependencies
+    2. Create backup snapshot
+  Apply:
+    3. Configure agent: claude-code
+    4. Configure agent: opencode
+    5. Install component: engram
+    6. Install component: sdd
+    7. Install component: skills
+    8. Install component: context7
+    9. Install component: persona
+   10. Install component: permissions
+   11. Install component: gga
+
+Commands to Execute:
+  npm install -g @context7/mcp
+  go install github.com/gentleman-programming/gga@latest
+
+No changes applied (dry run mode).
+```
+</Accordion>
+
+## Common Patterns
+
+### Full Ecosystem for Multiple Agents
+
+```bash
+gentle-ai install \
+  --agent claude-code,opencode,gemini-cli \
+  --preset full-gentleman
+```
+
+Configures all three agents with the complete ecosystem.
+
+### Minimal Setup for One Agent
+
+```bash
+gentle-ai install \
+  --agent cursor \
+  --preset minimal
+```
+
+Memory and security only, no skills or workflow.
+
+### SDD Workflow Only
+
+```bash
+gentle-ai install \
+  --agent claude-code \
+  --component engram,sdd,skills \
+  --persona gentleman
+```
+
+Core SDD workflow without MCP or GGA.
+
+### Context7 MCP Server Only
+
+```bash
+gentle-ai install \
+  --agent opencode \
+  --component context7 \
+  --persona neutral
+```
+
+Just the MCP server, no memory or skills.
+
+### Scripted Installation
+
+Add to your dotfiles:
+
+```bash
+#!/bin/bash
+# ~/.dotfiles/setup-gentle-ai.sh
+
+if command -v gentle-ai &> /dev/null; then
+  echo "Configuring Gentle AI..."
+  gentle-ai install \
+    --agent claude-code,opencode \
+    --preset full-gentleman \
+    || echo "Gentle AI configuration failed"
+else
+  echo "Gentle AI not installed, skipping..."
+fi
+```
+
+### CI/CD Integration
+
+Example GitHub Actions workflow:
+
+```yaml
+name: Configure Development Environment
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Gentle AI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/scripts/install.sh | bash
+      
+      - name: Configure Agents
+        run: |
+          gentle-ai install \
+            --agent opencode \
+            --preset ecosystem-only \
+            --dry-run
+```
+
+## Other Commands
+
+### Version
+
+Print the current version:
+
+```bash
+gentle-ai --version
+# or
+gentle-ai version
+# or
+gentle-ai -v
+```
+
+Output:
+```
+gentle-ai 1.0.0
+```
+
+### Update Check
+
+Check for available updates:
+
+```bash
+gentle-ai update
+```
+
+Output:
+```text
+Update Check Results:
+
+Gentle AI:
+  Current: 1.0.0
+  Latest:  1.1.0
+  Status:  Update available
+  Command: brew upgrade gentle-ai
+
+Context7:
+  Current: 2.1.0
+  Latest:  2.1.0
+  Status:  Up to date
+
+GGA:
+  Current: 0.5.0
+  Latest:  0.6.0
+  Status:  Update available
+  Command: go install github.com/gentleman-programming/gga@latest
+```
+
+<Info>
+The `update` command **checks** for updates but does not install them. Follow the suggested commands to update.
+</Info>
+
+## Error Handling
+
+### Invalid Flags
+
+```bash
+gentle-ai install --invalid-flag
+```
+
+Output:
+```
+Error: unknown flag: --invalid-flag
+```
+
+### Missing Required Flags
+
+```bash
+gentle-ai install
+```
+
+Output:
+```
+Error: must specify at least one agent via --agent or a preset via --preset
+```
+
+### Unsupported Agent
+
+```bash
+gentle-ai install --agent invalid-agent --preset minimal
+```
+
+Output:
+```
+Error: unsupported agent "invalid-agent"
+Available agents: claude-code, opencode, gemini-cli, cursor, vscode-copilot
+```
+
+### Dependency Failures
+
+If dependencies are missing:
+
+```text
+Error: missing required dependencies
+
+Missing:
+  ✗ git (required for component installation)
+  ✗ node (required for Context7 MCP server)
+
+Install with:
+  brew install git node
+
+Then re-run: gentle-ai install --agent claude-code --preset full-gentleman
+```
+
+## Output and Logs
+
+### Verbose Output
+
+CLI mode prints detailed progress:
+
+```text
+[12:34:56] Starting installation...
+[12:34:57] System detection complete
+[12:34:58] Creating backup: ~/.gentle-ai/backups/20260313_123456
+[12:34:59] Configuring agent: claude-code
+[12:35:00] Installing component: engram
+[12:35:01] Installing component: sdd
+...
+[12:35:15] Installation complete!
+```
+
+### Verification Report
+
+After installation, a verification report is printed:
+
+```text
+Verification Report:
+
+Agent: claude-code
+  ✓ System prompt: ~/.claude/CLAUDE.md
+  ✓ Skills directory: ~/.claude/skills/ (11 skills)
+  ✓ MCP config: ~/.claude/mcp/context7.json
+
+Agent: opencode
+  ✓ System prompt: ~/.config/opencode/AGENTS.md
+  ✓ Skills directory: ~/.config/opencode/skills/ (11 skills)
+  ✓ MCP config: ~/.config/opencode/settings.json
+
+Components:
+  ✓ engram: Injected into system prompts
+  ✓ sdd: Injected into system prompts
+  ✓ skills: 11 skill files written
+  ✓ context7: npm package installed, MCP configured
+  ✓ persona: Gentleman mode enabled
+  ✓ permissions: Security guardrails active
+  ✓ gga: Binary installed at /usr/local/bin/gga
+
+All checks passed!
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Interactive Mode"
+    icon="terminal"
+    href="/guides/interactive-mode"
+  >
+    Learn the TUI alternative
+  </Card>
+  <Card
+    title="Presets"
+    icon="sliders"
+    href="/guides/presets"
+  >
+    Understand preset configurations
+  </Card>
+  <Card
+    title="Backup & Restore"
+    icon="clock-rotate-left"
+    href="/guides/backup-restore"
+  >
+    Manage configuration snapshots
+  </Card>
+  <Card
+    title="Skills"
+    icon="book"
+    href="/guides/skills"
+  >
+    Deep dive into SDD skills
+  </Card>
+</CardGroup>

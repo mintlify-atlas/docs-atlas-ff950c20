@@ -1,0 +1,233 @@
+---
+title: Development Overview
+description: Contributing to Gentle AI - development setup, architecture principles, and workflow
+---
+
+## Welcome Contributors
+
+Gentle AI is an **ecosystem configurator** for AI coding agents, written in Go. This guide helps you set up your development environment, understand the codebase, and contribute effectively.
+
+## What You'll Build
+
+Gentle AI configures AI agents (Claude Code, OpenCode, Gemini CLI, Cursor, VS Code Copilot) with:
+
+- **Engram** - persistent cross-session memory
+- **SDD** - Spec-Driven Development workflow (9 phases)
+- **Skills** - curated coding patterns and workflows
+- **MCP servers** - Context7 for real-time documentation
+- **GGA** - Gentleman Guardian Angel AI provider switcher
+- **Persona & config** - security-first permissions, teaching-oriented persona
+
+## Prerequisites
+
+<CardGroup cols={2}>
+  <Card title="Go 1.22+" icon="code">
+    Required for building the CLI and running unit tests
+  </Card>
+  <Card title="Docker" icon="docker">
+    Optional - needed for E2E tests across Ubuntu/Arch
+  </Card>
+  <Card title="Git" icon="git">
+    Version control for contributions
+  </Card>
+  <Card title="Make" icon="terminal">
+    Optional - convenient build commands
+  </Card>
+</CardGroup>
+
+## Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/Gentleman-Programming/gentle-ai.git
+cd gentle-ai
+
+# Install dependencies
+go mod download
+
+# Build the binary
+go build -o gentle-ai ./cmd/gentle-ai
+
+# Run unit tests
+go test ./...
+
+# Try dry-run mode (no filesystem changes)
+./gentle-ai install --dry-run --agent claude-code --preset minimal
+```
+
+## Project Goals
+
+<CardGroup cols={2}>
+  <Card title="Agent Agnostic" icon="puzzle">
+    Support any AI agent through adapter pattern - no hardcoded agent logic in components
+  </Card>
+  <Card title="Safe by Default" icon="shield">
+    Backup configs before changes, support rollback, validate dependencies
+  </Card>
+  <Card title="Cross-Platform" icon="globe">
+    Works on macOS, Linux (Ubuntu/Arch/derivatives), and Windows 10/11
+  </Card>
+  <Card title="Developer Experience" icon="sparkles">
+    Interactive TUI + CLI mode, dry-run preview, clear error messages
+  </Card>
+</CardGroup>
+
+## Development Workflow
+
+### 1. Make Changes
+
+Edit code in `internal/` packages or add new agent adapters in `internal/agents/`.
+
+### 2. Run Tests
+
+```bash
+# Unit tests (fast)
+go test ./...
+
+# Specific package
+go test ./internal/agents/...
+
+# With coverage
+go test -cover ./...
+```
+
+### 3. Test E2E (Optional)
+
+```bash
+# Docker E2E tests (Ubuntu + Arch)
+RUN_FULL_E2E=1 ./e2e/docker-test.sh
+
+# With backup/restore tests
+RUN_FULL_E2E=1 RUN_BACKUP_TESTS=1 ./e2e/docker-test.sh
+```
+
+### 4. Build & Test Locally
+
+```bash
+# Build
+go build -o gentle-ai ./cmd/gentle-ai
+
+# Dry-run smoke test
+./gentle-ai install --dry-run --agent claude-code --preset full-gentleman
+
+# Test TUI (interactive mode)
+./gentle-ai
+```
+
+### 5. Submit PR
+
+Follow the [Contributing Guide](https://github.com/Gentleman-Programming/gentle-ai/blob/main/CONTRIBUTING.md) for PR guidelines and code review process.
+
+## Key Principles
+
+### Adapter Pattern
+
+Components **never** switch on `AgentID`. Instead, they call adapter methods:
+
+```go
+// ❌ BAD - hardcoded agent logic
+if agentID == model.AgentClaudeCode {
+    path = "~/.claude/skills"
+} else if agentID == model.AgentOpenCode {
+    path = "~/.config/opencode/skills"
+}
+
+// ✅ GOOD - adapter abstraction
+path := adapter.SkillsDir(homeDir)
+```
+
+This makes adding new agents trivial - just implement the `Adapter` interface.
+
+### Dependency Graph
+
+The planner builds a dependency graph to ensure correct installation order:
+
+```
+engram → skills → sdd → persona
+         ↓
+      context7 (MCP)
+```
+
+Components declare dependencies in `internal/catalog/dependencies.go`.
+
+### Staged Pipeline
+
+Execution happens in stages:
+
+1. **Prepare** - validate, detect, plan
+2. **Apply** - execute install steps
+3. **Rollback** - restore from backup on failure (optional)
+
+See `internal/pipeline/` for orchestration logic.
+
+### Marker-Based File Merging
+
+Inject content into user files without clobbering:
+
+```markdown
+<!-- gentle-ai:persona-start -->
+[Injected persona content]
+<!-- gentle-ai:persona-end -->
+```
+
+See `internal/components/filemerge/` for implementation.
+
+## Repository Structure
+
+```
+cmd/gentle-ai/          CLI entrypoint
+internal/
+  app/                  Command dispatch + runtime wiring
+  agents/               Agent adapters (claude, opencode, gemini, cursor, vscode)
+  components/           Install logic per component (engram, sdd, skills, mcp, etc.)
+  model/                Domain types (AgentID, ComponentID, SkillID, etc.)
+  catalog/              Registry definitions (agents, skills, components)
+  system/               OS/distro detection, dependency checks
+  planner/              Dependency graph, resolution, ordering
+  pipeline/             Staged execution + rollback
+  backup/               Config snapshot + restore
+  assets/               Embedded skill files + persona templates
+  tui/                  Bubbletea interactive TUI
+scripts/                Installer scripts (bash + PowerShell)
+e2e/                    Docker E2E tests (Ubuntu + Arch)
+testdata/               Golden test fixtures
+```
+
+## Testing Philosophy
+
+<CardGroup cols={3}>
+  <Card title="Unit Tests" icon="flask">
+    **50+ test files** covering all packages - fast, no side effects
+  </Card>
+  <Card title="E2E Tests" icon="docker">
+    **78 functions** in Docker containers - full install validation
+  </Card>
+  <Card title="Golden Files" icon="file">
+    **17 fixtures** for snapshot testing component output
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture Deep Dive" href="/development/architecture" icon="sitemap">
+    Understand package organization and design patterns
+  </Card>
+  <Card title="Testing Guide" href="/development/testing" icon="vial">
+    Learn testing strategies and how to write tests
+  </Card>
+  <Card title="Build Guide" href="/development/building" icon="hammer">
+    Build binaries, releases, and cross-platform artifacts
+  </Card>
+  <Card title="Contributing" href="https://github.com/Gentleman-Programming/gentle-ai/blob/main/CONTRIBUTING.md" icon="hand">
+    PR guidelines and code review process
+  </Card>
+</CardGroup>
+
+## Getting Help
+
+- **Issues**: [GitHub Issues](https://github.com/Gentleman-Programming/gentle-ai/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Gentleman-Programming/gentle-ai/discussions)
+- **Questions**: Open an issue with the `question` label
+
+Welcome to the Gentleman AI ecosystem! 🎩

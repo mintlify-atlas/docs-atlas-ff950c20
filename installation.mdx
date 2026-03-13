@@ -1,0 +1,311 @@
+---
+title: Installation
+description: Install Gentle AI on macOS, Linux, or Windows
+---
+
+## Quick Install
+
+The fastest way to get started:
+
+<CodeGroup>
+
+```bash macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/scripts/install.sh | bash
+```
+
+```powershell Windows
+irm https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/scripts/install.ps1 | iex
+```
+
+</CodeGroup>
+
+This downloads the latest release for your platform and launches the interactive TUI.
+
+## Package Managers
+
+### Homebrew (macOS / Linux)
+
+Recommended for macOS and Linux users:
+
+```bash
+brew tap Gentleman-Programming/homebrew-tap
+brew install gentle-ai
+```
+
+<Accordion title="Homebrew on Linux">
+Homebrew works on Linux too! If you already have Homebrew installed on Linux, Gentle AI will detect and use it automatically.
+
+Install Homebrew on Linux:
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+</Accordion>
+
+### Go Install
+
+If you have Go 1.24+ installed:
+
+```bash
+go install github.com/gentleman-programming/gentle-ai/cmd/gentle-ai@latest
+```
+
+<Warning>
+Make sure `$GOPATH/bin` or `$HOME/go/bin` is in your `$PATH`.
+</Warning>
+
+## Manual Download
+
+Download pre-built binaries from [GitHub Releases](https://github.com/Gentleman-Programming/gentle-ai/releases).
+
+### Available Platforms
+
+Release binaries are built for:
+
+- **macOS**: darwin/amd64, darwin/arm64 (Apple Silicon)
+- **Linux**: linux/amd64, linux/arm64
+- **Windows**: windows/amd64, windows/arm64
+
+<Steps>
+  <Step title="Download">
+    Download the archive for your platform:
+    
+    ```bash
+    # Example for Linux amd64
+    wget https://github.com/Gentleman-Programming/gentle-ai/releases/download/v1.0.0/gentle-ai_1.0.0_linux_amd64.tar.gz
+    ```
+  </Step>
+  
+  <Step title="Extract">
+    Extract the binary:
+    
+    <CodeGroup>
+    
+    ```bash macOS / Linux
+    tar -xzf gentle-ai_1.0.0_linux_amd64.tar.gz
+    ```
+    
+    ```powershell Windows
+    Expand-Archive gentle-ai_1.0.0_windows_amd64.zip
+    ```
+    
+    </CodeGroup>
+  </Step>
+  
+  <Step title="Install">
+    Move the binary to your PATH:
+    
+    <CodeGroup>
+    
+    ```bash macOS / Linux
+    sudo mv gentle-ai /usr/local/bin/
+    ```
+    
+    ```powershell Windows
+    # Move to a directory in your PATH, e.g.:
+    Move-Item gentle-ai.exe C:\Windows\System32\
+    ```
+    
+    </CodeGroup>
+  </Step>
+  
+  <Step title="Verify">
+    Confirm installation:
+    
+    ```bash
+    gentle-ai --version
+    ```
+  </Step>
+</Steps>
+
+### Checksum Verification (Windows)
+
+Some antivirus products flag unsigned Go binaries heuristically. Verify integrity using the release checksum:
+
+```powershell
+# Download checksums.txt from the release
+Invoke-WebRequest -Uri https://github.com/Gentleman-Programming/gentle-ai/releases/download/v1.0.0/checksums.txt -OutFile checksums.txt
+
+# Compute local hash
+Get-FileHash .\gentle-ai_1.0.0_windows_amd64.zip -Algorithm SHA256
+
+# Compare with checksums.txt
+```
+
+If the hash matches, the file is authentic.
+
+## System Requirements
+
+### Operating System
+
+<CardGroup cols={2}>
+  <Card title="macOS" icon="apple">
+    macOS 10.15+ (Catalina or later)
+    
+    Both Intel and Apple Silicon supported
+  </Card>
+  <Card title="Linux" icon="linux">
+    Ubuntu 20.04+, Debian 11+, Arch Linux
+    
+    Derivatives detected via `/etc/os-release`
+  </Card>
+  <Card title="Windows" icon="windows">
+    Windows 10/11
+    
+    PowerShell 5.1+ or PowerShell Core 7+
+  </Card>
+  <Card title="Other" icon="question">
+    Other platforms not officially supported
+    
+    May work with manual configuration
+  </Card>
+</CardGroup>
+
+### Runtime Dependencies
+
+Gentle AI auto-detects and guides installation of:
+
+| Tool | Required For | Detection |
+|------|-------------|----------|
+| git | Component installation, version checks | `git --version` |
+| curl | Downloading dependencies | `curl --version` |
+| node | Context7 MCP server | `node --version` |
+| npm | Installing MCP servers | `npm --version` |
+
+<Info>
+**Platform-aware hints**: Gentle AI suggests the right install command for your OS:
+- macOS: `brew install <package>`
+- Ubuntu/Debian: `sudo apt install <package>`
+- Arch: `sudo pacman -S <package>`
+- Windows: `winget install <package>`
+</Info>
+
+### Package Manager Detection
+
+Gentle AI detects and uses your system's package manager:
+
+| Platform | Default | Alternatives |
+|----------|---------|-------------|
+| macOS | Homebrew | Manual install |
+| Ubuntu/Debian | apt | Homebrew (if installed) |
+| Arch Linux | pacman | Homebrew (if installed) |
+| Windows | winget | Manual install |
+
+<Tip>
+On Linux, if Homebrew is installed, Gentle AI will prefer it over apt/pacman for better cross-platform consistency.
+</Tip>
+
+## Post-Installation
+
+After installing, you can:
+
+### Launch the TUI
+
+```bash
+gentle-ai
+```
+
+### Use CLI Mode
+
+```bash
+gentle-ai install --agent claude-code --preset full-gentleman
+```
+
+### Check for Updates
+
+```bash
+gentle-ai update
+```
+
+<Note>
+The `update` command checks for new versions of Gentle AI itself and ecosystem components like Context7.
+</Note>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Command not found after installation">
+    Make sure the binary location is in your `$PATH`:
+    
+    ```bash
+    # Check PATH
+    echo $PATH
+    
+    # Find where gentle-ai is installed
+    which gentle-ai
+    ```
+    
+    If using Go install, add Go's bin directory to PATH:
+    ```bash
+    export PATH="$HOME/go/bin:$PATH"
+    ```
+  </Accordion>
+  
+  <Accordion title="Permission denied (macOS/Linux)">
+    Make sure the binary is executable:
+    
+    ```bash
+    chmod +x /usr/local/bin/gentle-ai
+    ```
+  </Accordion>
+  
+  <Accordion title="Windows SmartScreen warning">
+    Windows may show a SmartScreen warning for unsigned binaries.
+    
+    1. Click "More info"
+    2. Click "Run anyway"
+    3. Or verify the checksum as shown above
+  </Accordion>
+  
+  <Accordion title="npm permission errors">
+    If you see EACCES errors during npm global installs:
+    
+    **Option 1**: Use a node version manager (recommended)
+    ```bash
+    # Install nvm
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+    
+    # Install node via nvm
+    nvm install node
+    ```
+    
+    **Option 2**: Fix npm permissions
+    ```bash
+    mkdir ~/.npm-global
+    npm config set prefix '~/.npm-global'
+    export PATH=~/.npm-global/bin:$PATH
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Quickstart"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Complete your first installation
+  </Card>
+  <Card
+    title="Interactive Mode"
+    icon="terminal"
+    href="/guides/interactive-mode"
+  >
+    Learn the TUI workflow
+  </Card>
+  <Card
+    title="Platform Support"
+    icon="laptop"
+    href="/platforms/overview"
+  >
+    Platform-specific details
+  </Card>
+  <Card
+    title="CLI Mode"
+    icon="code"
+    href="/guides/cli-mode"
+  >
+    Master the command-line interface
+  </Card>
+</CardGroup>

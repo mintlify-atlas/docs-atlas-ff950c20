@@ -1,0 +1,285 @@
+---
+title: 'gentle-ai update'
+description: 'Check for updates to Gentleman AI ecosystem tools'
+---
+
+## Overview
+
+The `update` command checks for available updates to Gentleman AI ecosystem tools: `gentle-ai`, `engram`, and `gga`. It fetches the latest release from GitHub and compares it to your installed version.
+
+## Usage
+
+```bash
+gentle-ai update
+```
+
+No arguments or flags required.
+
+## What It Checks
+
+The update command checks these tools:
+
+| Tool | Repository | Detection Method |
+|------|------------|------------------|
+| **gentle-ai** | `Gentleman-Programming/gentle-ai` | Build-time version (ldflags) |
+| **engram** | `Gentleman-Programming/engram` | `engram version` |
+| **gga** | `Gentleman-Programming/gentleman-guardian-angel` | `gga --version` |
+
+## Output Format
+
+The command displays a plain-text table:
+
+```bash
+Update Check
+============
+
+  [ok] gentle-ai    installed: 1.0.0       latest: 1.0.0
+  [UP] engram       installed: 1.7.0       latest: 1.8.1       go install github.com/Gentleman-Programming/engram/cmd/engram@latest
+  [ok] gga          installed: 2.0.0       latest: 2.0.0
+
+1 update(s) available.
+```
+
+## Status Indicators
+
+| Icon | Status | Meaning |
+|------|--------|--------|
+| `[ok]` | Up to date | Installed version matches or exceeds latest release |
+| `[UP]` | Update available | A newer version is available |
+| `[--]` | Not installed | Binary not found on PATH |
+| `[??]` | Version unknown | Cannot determine version (e.g., dev build) |
+| `[!!]` | Check failed | GitHub API request failed |
+
+## Update Instructions
+
+The command provides platform-specific update instructions for each tool:
+
+### gentle-ai
+
+<CodeGroup>
+
+```bash macOS
+brew upgrade gentle-ai
+```
+
+```bash Linux
+curl -fsSL https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/scripts/install.sh | bash
+```
+
+```powershell Windows
+irm https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/scripts/install.ps1 | iex
+```
+
+</CodeGroup>
+
+### engram
+
+<CodeGroup>
+
+```bash Homebrew (macOS/Linux)
+brew upgrade engram
+```
+
+```bash Go (any platform)
+go install github.com/Gentleman-Programming/engram/cmd/engram@latest
+```
+
+</CodeGroup>
+
+### gga
+
+<CodeGroup>
+
+```bash Homebrew (macOS/Linux)
+brew upgrade gga
+```
+
+```bash Manual
+# See https://github.com/Gentleman-Programming/gentleman-guardian-angel
+curl -fsSL https://raw.githubusercontent.com/Gentleman-Programming/gentleman-guardian-angel/main/install.sh | bash
+```
+
+</CodeGroup>
+
+## Examples
+
+### Check for updates
+
+```bash
+$ gentle-ai update
+
+Update Check
+============
+
+  [ok] gentle-ai    installed: 1.0.0       latest: 1.0.0
+  [ok] engram       installed: 1.8.1       latest: 1.8.1
+  [ok] gga          installed: 2.0.0       latest: 2.0.0
+
+All tools are up to date!
+```
+
+### Update available
+
+```bash
+$ gentle-ai update
+
+Update Check
+============
+
+  [UP] gentle-ai    installed: 0.9.0       latest: 1.0.0       brew upgrade gentle-ai
+  [ok] engram       installed: 1.8.1       latest: 1.8.1
+  [ok] gga          installed: 2.0.0       latest: 2.0.0
+
+1 update(s) available.
+```
+
+### Tool not installed
+
+```bash
+$ gentle-ai update
+
+Update Check
+============
+
+  [ok] gentle-ai    installed: 1.0.0       latest: 1.0.0
+  [--] engram       installed: -           latest: 1.8.1
+  [ok] gga          installed: 2.0.0       latest: 2.0.0
+
+All tools are up to date!
+```
+
+## Version Detection
+
+### gentle-ai
+
+Version is embedded at build time via ldflags:
+
+```bash
+go build -ldflags "-X github.com/gentleman-programming/gentle-ai/internal/app.Version=1.0.0"
+```
+
+Dev builds report version as `dev`:
+
+```bash
+$ gentle-ai version
+gentle-ai dev
+```
+
+### engram
+
+Detected via `engram version` command:
+
+```bash
+$ engram version
+engram version 1.8.1
+```
+
+### gga
+
+Detected via `gga --version` command:
+
+```bash
+$ gga --version
+gga version 2.0.0
+```
+
+## Version Comparison
+
+Versions are compared using semantic versioning (semver):
+
+1. Strip leading `v` prefix (e.g., `v1.0.0` → `1.0.0`)
+2. Parse major, minor, patch components
+3. Compare numerically left-to-right
+
+**Examples:**
+- `1.0.0` == `1.0.0` → **Up to date**
+- `1.0.1` > `1.0.0` → **Up to date** (local is newer)
+- `1.0.0` < `1.1.0` → **Update available**
+- `dev` → **Version unknown** (non-semver)
+
+## Exit Codes
+
+| Code | Meaning |
+|------|--------|
+| 0 | Success (check completed) |
+
+The update command always exits with code 0, even if updates are available or checks fail. It is informational only.
+
+## TUI Integration
+
+Update checks run automatically in the TUI welcome screen:
+
+```bash
+$ gentle-ai
+
+╔════════════════════════════════════════════════════╗
+║  AI Gentle Stack                                   ║
+║  Version 1.0.0                                     ║
+║                                                    ║
+║  Updates available: engram 1.7.0 -> 1.8.1         ║
+╚════════════════════════════════════════════════════╝
+```
+
+Update details appear on the completion screen after installation.
+
+## API Rate Limiting
+
+The update command uses the GitHub REST API to fetch release information:
+
+- **Endpoint:** `https://api.github.com/repos/{owner}/{repo}/releases/latest`
+- **Rate limit:** 60 requests/hour (unauthenticated)
+- **Authentication:** Not required
+
+If rate limited, the command reports `[!!] Check failed` and continues.
+
+## Concurrent Checks
+
+All tools are checked concurrently using goroutines:
+
+```go
+func CheckAll(ctx context.Context, currentVersion string, profile PlatformProfile) []UpdateResult {
+    results := make([]UpdateResult, len(Tools))
+    var wg sync.WaitGroup
+    for i, tool := range Tools {
+        wg.Add(1)
+        go func(idx int, t ToolInfo) {
+            defer wg.Done()
+            results[idx] = checkSingleTool(ctx, t, currentVersion, profile)
+        }(i, tool)
+    }
+    wg.Wait()
+    return results
+}
+```
+
+Source: `internal/update/check.go:12`
+
+## Offline Behavior
+
+If network is unavailable:
+- GitHub API requests fail
+- Status shows `[!!] Check failed`
+- Installed version still displays (if detectable)
+- Command exits successfully (code 0)
+
+## Related Commands
+
+- [`gentle-ai version`](/cli/version) - Show version of gentle-ai only
+- [`gentle-ai install`](/cli/install) - Install/update ecosystem components
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Components" icon="puzzle-piece" href="/concepts/components">
+    Learn about ecosystem components
+  </Card>
+  <Card title="Engram" icon="brain" href="/components/engram">
+    Persistent memory system
+  </Card>
+  <Card title="GGA" icon="shield-halved" href="/components/gga">
+    AI provider switcher
+  </Card>
+  <Card title="Installation" icon="download" href="/quickstart">
+    Install Gentleman AI
+  </Card>
+</CardGroup>

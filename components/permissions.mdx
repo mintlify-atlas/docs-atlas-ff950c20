@@ -1,0 +1,356 @@
+---
+title: Permissions
+description: Security-first defaults and guardrails for AI tool usage
+---
+
+# Permissions
+
+The Permissions component configures security guardrails for AI agents, setting safe defaults that auto-approve most operations while blocking dangerous commands and sensitive file access.
+
+## What is Permissions?
+
+Permissions controls:
+- **Tool call approval**: Which operations require user confirmation
+- **Command blocking**: Deny dangerous bash commands
+- **File access**: Prevent reading secrets and credentials
+- **Git safety**: Ask before destructive git operations
+
+Think of it as "safe mode" for AI agents—letting them work autonomously while protecting you from accidents.
+
+## Philosophy: Security-First Defaults
+
+The permissions system follows these principles:
+
+1. **Auto-approve safe operations**: File edits, reads, searches
+2. **Ask for destructive actions**: Git force push, hard reset, commit
+3. **Block dangerous commands**: `rm -rf /`, credential files
+4. **Explicit > Implicit**: Better to ask than cause damage
+
+## Configuration by Agent
+
+Each agent has different permission systems, so Gentle AI configures them appropriately:
+
+<CardGroup cols={2}>
+  <Card title="Claude Code" icon="wave">
+    Sets `defaultMode: "bypassPermissions"` in settings.json with explicit deny list.
+  </Card>
+  <Card title="OpenCode" icon="code">
+    Configures granular bash and read permissions with pattern matching in opencode.json.
+  </Card>
+  <Card title="Gemini CLI" icon="sparkles">
+    Sets `defaultApprovalMode: "yolo"` in settings.json for auto-approval.
+  </Card>
+  <Card title="VS Code Copilot" icon="code">
+    Enables `chat.tools.autoApprove: true` in settings.json.
+  </Card>
+</CardGroup>
+
+Source: `internal/components/permissions/inject.go:17-88`
+
+## Permission Overlays
+
+### Claude Code
+
+```json
+{
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "deny": [
+      "rm -rf /",
+      "sudo rm -rf /",
+      ".env"
+    ]
+  }
+}
+```
+
+**Behavior**: Auto-accept all tool calls EXCEPT the explicit deny list.
+
+Valid modes: `acceptEdits`, `bypassPermissions`, `default`, `dontAsk`, `plan`
+
+Source: `internal/components/permissions/inject.go:18-29`
+
+### OpenCode
+
+```json
+{
+  "permission": {
+    "bash": {
+      "*": "allow",
+      "git commit *": "ask",
+      "git push *": "ask",
+      "git push": "ask",
+      "git push --force *": "ask",
+      "git rebase *": "ask",
+      "git reset --hard *": "ask"
+    },
+    "read": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      "**/.env": "deny",
+      "**/.env.*": "deny",
+      "**/secrets/**": "deny",
+      "**/credentials.json": "deny"
+    }
+  }
+}
+```
+
+**Behavior**:
+- **Bash**: Allow everything EXCEPT destructive git commands (ask first)
+- **Read**: Allow everything EXCEPT credential files (deny)
+
+Source: `internal/components/permissions/inject.go:32-54`
+
+### Gemini CLI
+
+```json
+{
+  "general": {
+    "defaultApprovalMode": "yolo"
+  }
+}
+```
+
+**Behavior**: Auto-approve all tool calls without prompting.
+
+Source: `internal/components/permissions/inject.go:57-62`
+
+### VS Code Copilot
+
+```json
+{
+  "chat.tools.autoApprove": true
+}
+```
+
+**Behavior**: Enable auto-approval for chat tool calls.
+
+Source: `internal/components/permissions/inject.go:65-68`
+
+## Pattern Matching (OpenCode)
+
+OpenCode's permission system supports glob patterns:
+
+| Pattern | Matches | Example |
+|---------|---------|----------|
+| `*` | Everything | `bash: { "*": "allow" }` |
+| `git push *` | Git push with any args | `git push origin main` |
+| `*.env` | Files ending in .env | `production.env` |
+| `**/.env` | .env in any subdirectory | `src/config/.env` |
+| `**/secrets/**` | Any file in secrets directory | `config/secrets/api-key.txt` |
+
+### Priority Order
+
+More specific patterns override wildcards:
+
+```json
+{
+  "bash": {
+    "*": "allow",              // Default: allow everything
+    "git push --force *": "ask" // Override: ask for force push
+  }
+}
+```
+
+## Installation Behavior
+
+Permissions component:
+
+1. **Check agent support**: Only runs if agent has a settings file
+2. **Get agent overlay**: Retrieve agent-specific permission config
+3. **Merge into settings**: Deep merge the overlay into existing settings.json
+4. **Report changes**: Return whether file was modified
+
+Source: `internal/components/permissions/inject.go:90-107`
+
+```go
+func Inject(homeDir string, adapter agents.Adapter) (InjectionResult, error) {
+    settingsPath := adapter.SettingsPath(homeDir)
+    if settingsPath == "" {
+        return InjectionResult{}, nil // Agent doesn't use settings file
+    }
+
+    overlay := agentOverlay(adapter.Agent())
+    if overlay == nil {
+        return InjectionResult{}, nil // Agent doesn't support permission injection
+    }
+
+    writeResult, err := mergeJSONFile(settingsPath, overlay)
+    return InjectionResult{
+        Changed: writeResult.Changed,
+        Files:   []string{settingsPath},
+    }, err
+}
+```
+
+## Agents Not Supported
+
+**Cursor**: Manages permissions via `cli-config.json`, not `settings.json`. Gentle AI does not modify Cursor's permission system.
+
+Source: `internal/components/permissions/inject.go:82-84`
+
+## Security Examples
+
+### Dangerous Commands Blocked
+
+```bash
+# Claude Code deny list:
+rm -rf /
+sudo rm -rf /
+.env  # Blocks reads of .env files
+```
+
+### Git Operations Require Confirmation (OpenCode)
+
+```bash
+# These commands trigger user prompt:
+git commit -m "message"
+git push origin main
+git push --force origin main
+git rebase -i HEAD~5
+git reset --hard HEAD~1
+
+# These run automatically:
+git status
+git diff
+git log
+git branch -a
+```
+
+### Credential Files Denied (OpenCode)
+
+```
+# These reads are blocked:
+.env
+.env.local
+.env.production
+src/config/.env
+config/secrets/api-key.txt
+credentials.json
+aws/credentials.json
+
+# These reads are allowed:
+README.md
+package.json
+src/index.ts
+```
+
+## Why Auto-Approve?
+
+You might wonder: "Isn't auto-approval dangerous?"
+
+### The Token Cost Problem
+
+Every permission prompt:
+- Interrupts the agent's flow
+- Requires a full context reload after user input
+- Consumes 2-3x tokens per operation
+- Breaks agent reasoning mid-task
+
+For a typical SDD workflow (50+ file operations), asking for each edit would:
+- Cost 100+ interruptions
+- Consume 10-50K extra tokens
+- Make the agent nearly unusable
+
+### The Security Solution
+
+Instead of blocking everything, Gentle AI:
+1. **Allows safe operations**: File edits, reads (except secrets)
+2. **Blocks dangerous patterns**: Destructive commands, credential access
+3. **Asks for risky actions**: Git operations that rewrite history
+
+This gives you **90% autonomy** with **99% safety**.
+
+## Customizing Permissions
+
+### Adding More Deny Patterns (OpenCode)
+
+Edit `~/.config/opencode/opencode.json`:
+
+```json
+{
+  "permission": {
+    "bash": {
+      "npm publish *": "ask",     // Ask before publishing packages
+      "docker rm *": "ask"         // Ask before removing containers
+    },
+    "read": {
+      "**/private/**": "deny",     // Block private directory
+      "*.key": "deny"              // Block key files
+    }
+  }
+}
+```
+
+### Disabling Auto-Approval
+
+If you prefer manual control:
+
+**Claude Code**: Change `"defaultMode"` to `"default"`
+
+**OpenCode**: Change `"*": "allow"` to `"*": "ask"` for bash and read
+
+**Gemini CLI**: Change `"defaultApprovalMode"` to `"always-ask"`
+
+**VS Code Copilot**: Set `"chat.tools.autoApprove": false`
+
+## Merge Logic
+
+Permissions uses deep JSON merging:
+
+```go
+func mergeJSONFile(path string, overlay []byte) (WriteResult, error) {
+    // Read existing settings (or treat as empty if not found)
+    baseJSON, err := osReadFile(path)
+    if err != nil {
+        return WriteResult{}, err
+    }
+
+    // Deep merge overlay into base
+    merged, err := filemerge.MergeJSONObjects(baseJSON, overlay)
+    if err != nil {
+        return WriteResult{}, err
+    }
+
+    // Write atomically to prevent corruption
+    return filemerge.WriteFileAtomic(path, merged, 0o644)
+}
+```
+
+**Behavior**:
+- Existing settings are preserved
+- New keys from overlay are added
+- Overlapping keys use overlay values
+- Atomic write prevents partial updates
+
+Source: `internal/components/permissions/inject.go:109-121`
+
+## FAQ
+
+<Accordion title="Can the agent still commit secrets if I don't block writes?">
+  Yes, if you allow git commits without asking. Best practice: Keep `git commit` in the "ask" list and use `.gitignore` to prevent staging secrets.
+</Accordion>
+
+<Accordion title="What if I want to read a .env file?">
+  Temporarily edit your permissions config to allow it, or use `cat .env` in your terminal instead of asking the agent.
+</Accordion>
+
+<Accordion title="Why doesn't Gentle AI configure Cursor permissions?">
+  Cursor manages permissions via `cli-config.json`, which has a different schema. Gentle AI focuses on agents with standardized settings files.
+</Accordion>
+
+<Accordion title="Can I disable permissions entirely?">
+  Yes. Edit your agent's settings file and remove the permission keys Gentle AI added. Your agent will revert to its default permission behavior.
+</Accordion>
+
+<Accordion title="Do permission denials show up in logs?">
+  Depends on the agent. OpenCode shows permission denials in the UI. Claude Code may silently skip denied operations. Check your agent's documentation.
+</Accordion>
+
+## Related Components
+
+- [Persona](/components/persona) - Works alongside permissions for behavioral guardrails
+- [SDD](/components/sdd) - Benefits from auto-approval (reduces token cost 2-3x)
+- [Engram](/components/engram) - MCP operations respect permission settings

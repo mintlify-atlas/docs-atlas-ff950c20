@@ -1,0 +1,223 @@
+---
+title: Engram
+description: Persistent cross-session memory for AI agents
+---
+
+# Engram
+
+Engram is a persistent memory system that enables AI agents to remember context across sessions. It uses an MCP (Model Context Protocol) server to store and retrieve observations, allowing agents to build a knowledge base over time.
+
+## What is Engram?
+
+Engram provides long-term memory for AI agents through:
+- **Cross-session persistence**: Context survives conversation restarts
+- **Semantic search**: Query past observations by topic, project, or type
+- **Structured observations**: Store decisions, bugs, discoveries, and architecture notes
+- **Compaction survival**: Critical context persists even when conversations are compressed
+
+## How It Works
+
+Engram installs as an MCP server that your AI agent can access through tool calls:
+
+```typescript
+// Save a memory
+mem_save(
+  title: "User prefers dark mode",
+  topic_key: "preferences/ui",
+  type: "decision",
+  project: "myapp",
+  content: "User explicitly requested dark mode as default. Applied in settings.ts:42"
+)
+
+// Search memories
+mem_search(
+  query: "dark mode preferences",
+  project: "myapp"
+)
+
+// Retrieve full observation
+mem_get_observation(id: "obs_123")
+```
+
+## Configuration Files Written
+
+Engram modifies different configuration files depending on your AI agent:
+
+<CardGroup cols={2}>
+  <Card title="Claude Code" icon="wave">
+    Writes `~/.config/claude-code/mcp-servers/engram.json` with MCP server configuration.
+  </Card>
+  <Card title="OpenCode" icon="code">
+    Merges into `~/.config/opencode/opencode.json` under the `mcp.engram` key with remote MCP format.
+  </Card>
+  <Card title="Gemini CLI" icon="sparkles">
+    Merges into `~/.gemini/settings.json` under `mcpServers.engram`.
+  </Card>
+  <Card title="Cursor" icon="cursor">
+    Merges into `~/.cursor/mcp.json` under the `servers` key.
+  </Card>
+</CardGroup>
+
+## System Prompt Injection
+
+For agents that support system prompts, Engram injects the **Engram Protocol** instructions:
+
+- **Claude Code**: Injects as a markdown section into `~/.config/claude-code/.system-prompt.md`
+- **OpenCode**: Injects into `~/.config/opencode/AGENTS.md`
+- **Generic agents**: Appends to system prompt file
+
+### Sample Protocol Content
+
+The protocol teaches agents:
+1. When to save observations (decisions, bugs, discoveries, patterns)
+2. How to structure `mem_save` calls with proper metadata
+3. Search patterns for retrieving relevant context
+4. The two-step read pattern: `mem_search` → `mem_get_observation`
+
+## MCP Configuration Examples
+
+### OpenCode (Remote MCP)
+
+```json
+{
+  "mcp": {
+    "engram": {
+      "command": ["engram", "mcp"],
+      "enabled": true,
+      "type": "local"
+    }
+  }
+}
+```
+
+### Claude Code (Separate File)
+
+```json
+{
+  "command": "engram",
+  "args": []
+}
+```
+
+### Cursor / VS Code Copilot (mcp.json)
+
+```json
+{
+  "servers": {
+    "engram": {
+      "command": "engram",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+## Installation Behavior
+
+1. **Detect MCP support**: Check if the agent supports MCP servers
+2. **Write MCP config**: Use agent-specific strategy (separate files vs. merged settings)
+3. **Inject protocol**: If agent supports system prompts, inject Engram protocol instructions
+4. **Atomic writes**: All file operations use atomic writes to prevent corruption
+
+## File Merge Strategy
+
+Engram uses three different merge strategies based on agent capabilities:
+
+| Strategy | Agents | Behavior |
+|----------|--------|----------|
+| `StrategySeparateMCPFiles` | Claude Code | Writes standalone JSON file per MCP server |
+| `StrategyMergeIntoSettings` | OpenCode, Gemini CLI | Merges MCP config into main settings file |
+| `StrategyMCPConfigFile` | Cursor, VS Code Copilot | Merges into dedicated `mcp.json` file |
+
+### Merge Logic
+
+When merging JSON files, Engram:
+- Reads existing file (or treats as empty if not found)
+- Deep merges the overlay into the base JSON
+- Writes atomically to prevent corruption
+- Reports whether the file changed
+
+Source: `internal/components/engram/inject.go:127-138`
+
+## Observation Types
+
+Engram supports structured observation types:
+
+- **`decision`**: Architectural or design decisions
+- **`bugfix`**: Bug discoveries and fixes
+- **`discovery`**: New insights or patterns learned
+- **`pattern`**: Reusable code or workflow patterns
+- **`architecture`**: System design and structure notes
+- **`config`**: Configuration and setup details
+
+## Use Cases
+
+### SDD Artifact Persistence
+
+Spec-Driven Development (SDD) uses Engram as its primary persistence backend:
+
+```typescript
+// Save a proposal
+mem_save(
+  title: "sdd/add-dark-mode/proposal",
+  topic_key: "sdd/add-dark-mode/proposal",
+  type: "architecture",
+  project: "myapp",
+  content: "# Proposal: Add Dark Mode\n\n..."
+)
+
+// Later, retrieve it
+mem_search(query: "sdd/add-dark-mode/proposal", project: "myapp")
+```
+
+### Project Context
+
+```typescript
+// Initialize project context
+mem_save(
+  title: "sdd-init/myapp",
+  topic_key: "sdd-init/myapp",
+  type: "architecture",
+  project: "myapp",
+  content: "Tech stack: Go + React\nArchitecture: Microservices..."
+)
+```
+
+### Bug Tracking
+
+```typescript
+mem_save(
+  title: "Fixed null pointer in auth middleware",
+  type: "bugfix",
+  project: "myapp",
+  content: "Issue: JWT validation crashed on missing header\nFix: Added nil check in middleware.go:45\nLearned: Always validate headers before parsing"
+)
+```
+
+## FAQ
+
+<Accordion title="What happens if Engram isn't installed?">
+  Gentle AI gracefully degrades to ephemeral mode. SDD artifacts are kept in context but won't survive conversation compaction or restarts. The system recommends enabling Engram or OpenSpec for persistence.
+</Accordion>
+
+<Accordion title="Can I use both Engram and OpenSpec?">
+  Yes! Hybrid mode persists to both backends. Engram provides cross-session recovery and fast search, while OpenSpec gives you human-readable files in your project. Note: hybrid mode consumes more tokens per operation.
+</Accordion>
+
+<Accordion title="Where is Engram data stored?">
+  Engram stores observations in a local database managed by the `engram` binary. The exact location depends on your OS, typically in `~/.engram/` or platform-specific data directories.
+</Accordion>
+
+<Accordion title="How do I query Engram outside of AI conversations?">
+  Run `engram list` or `engram search <query>` from your terminal to browse stored observations. Use `engram get <id>` to view full content.
+</Accordion>
+
+<Accordion title="What's the difference between title and topic_key?">
+  `title` is a human-readable description. `topic_key` is a structured identifier that enables upserts—saving with the same topic_key updates the existing observation instead of creating duplicates.
+</Accordion>
+
+## Related Components
+
+- [SDD](/components/sdd) - Uses Engram as default persistence backend
+- [Skills](/components/skills) - Skill registry can be cached in Engram
+- [Persona](/components/persona) - Works alongside Engram protocol in system prompts

@@ -1,0 +1,478 @@
+---
+title: Backup & Restore
+description: Managing configuration snapshots and rollback
+---
+
+## Overview
+
+Gentle AI automatically creates backups before every configuration change. This ensures you can always revert to a previous state if something goes wrong.
+
+<CardGroup cols={2}>
+  <Card title="Automatic Backups" icon="clock">
+    Created before every install
+  </Card>
+  <Card title="Timestamped Snapshots" icon="calendar">
+    Easy to identify and compare
+  </Card>
+  <Card title="One-Command Restore" icon="rotate-left">
+    Simple TUI or CLI restore
+  </Card>
+  <Card title="Safe Rollback" icon="shield">
+    Preserves agent configs
+  </Card>
+</CardGroup>
+
+## How Backups Work
+
+### Automatic Creation
+
+Every time you run an installation, Gentle AI:
+
+<Steps>
+  <Step title="Scans Agent Configs">
+    Identifies all affected agent configuration files:
+    - System prompts (CLAUDE.md, AGENTS.md, etc.)
+    - Skills directories
+    - MCP configuration files
+    - Settings files
+  </Step>
+  
+  <Step title="Creates Snapshot">
+    Copies all files to a timestamped backup directory:
+    ```
+    ~/.gentle-ai/backups/20260313_123456/
+    ```
+    
+    Includes a manifest with metadata:
+    - Timestamp
+    - Selected agents
+    - Components installed
+    - File mappings
+  </Step>
+  
+  <Step title="Preserves State">
+    Captures:
+    - File contents (verbatim)
+    - Directory structure
+    - Permissions
+    - Timestamps
+  </Step>
+</Steps>
+
+<Info>
+Backups are created during the **Prepare stage**, before any files are modified.
+</Info>
+
+### Backup Location
+
+All backups are stored in:
+
+```bash
+~/.gentle-ai/backups/
+```
+
+Each backup is a timestamped directory:
+
+```
+~/.gentle-ai/backups/
+  20260313_123456/
+    manifest.json
+    claude-code/
+      CLAUDE.md
+      skills/
+        sdd-init/
+        sdd-apply/
+        ...
+      mcp/
+        context7.json
+    opencode/
+      AGENTS.md
+      settings.json
+      skills/
+        ...
+```
+
+### Manifest Format
+
+Each backup includes a `manifest.json` file:
+
+```json
+{
+  "id": "20260313_123456",
+  "createdAt": "2026-03-13T12:34:56Z",
+  "agents": ["claude-code", "opencode"],
+  "components": ["engram", "sdd", "skills", "context7"],
+  "files": [
+    {
+      "source": "/Users/dev/.claude/CLAUDE.md",
+      "backup": "claude-code/CLAUDE.md"
+    },
+    {
+      "source": "/Users/dev/.claude/skills/",
+      "backup": "claude-code/skills/"
+    }
+  ]
+}
+```
+
+## Restoring from Backup
+
+### Via TUI
+
+The interactive mode provides a visual backup browser:
+
+<Steps>
+  <Step title="Launch TUI">
+    ```bash
+    gentle-ai
+    ```
+  </Step>
+  
+  <Step title="Select 'Restore Backup'">
+    From the welcome screen, choose the restore option.
+  </Step>
+  
+  <Step title="Browse Backups">
+    ```text
+    Available Backups
+    
+      > 2026-03-13 12:34:56  (2 agents, 7 components)
+        2026-03-12 09:15:23  (1 agent, 5 components)
+        2026-03-10 14:42:01  (3 agents, 8 components)
+    
+        Back to Welcome
+    ```
+    
+    Navigate with arrow keys (`↑`/`↓` or `j`/`k`).
+  </Step>
+  
+  <Step title="Confirm Restore">
+    Press `Enter` on the backup to restore.
+    
+    Gentle AI will:
+    - Restore all files from the snapshot
+    - Overwrite current configurations
+    - Verify restoration success
+  </Step>
+</Steps>
+
+<Warning>
+Restoring a backup **overwrites** current configurations. Make sure you want to revert.
+</Warning>
+
+### Via CLI
+
+<Note>
+CLI restore is not directly supported. Use the TUI for restore operations:
+
+```bash
+gentle-ai
+# Select "Restore Backup"
+```
+</Note>
+
+Alternatively, manually restore from backup directory:
+
+```bash
+# List available backups
+ls ~/.gentle-ai/backups/
+
+# Manually copy files
+cp -r ~/.gentle-ai/backups/20260313_123456/claude-code/* ~/.claude/
+```
+
+## Backup Scenarios
+
+### Scenario 1: Installation Failure
+
+**Problem**: Installation fails midway due to dependency issues.
+
+**What Happens**:
+1. Pipeline detects failure
+2. Automatically triggers rollback
+3. Restores from backup created at start
+4. Cleans up partial changes
+
+**Result**: Your agent configs are unchanged, as if the installation never ran.
+
+<Info>
+Automatic rollback happens during the installation process — you don't need to manually restore.
+</Info>
+
+### Scenario 2: Unwanted Configuration
+
+**Problem**: You installed components you don't want.
+
+**Solution**:
+1. Launch TUI: `gentle-ai`
+2. Select "Restore Backup"
+3. Choose the backup from before the install
+4. Confirm restoration
+
+**Result**: Your agent configs revert to the previous state.
+
+### Scenario 3: Testing Configurations
+
+**Workflow**:
+1. Install with preset A
+2. Test your agent
+3. Restore backup
+4. Install with preset B
+5. Compare behaviors
+6. Keep the one you prefer
+
+**Result**: Safe experimentation without permanent changes.
+
+### Scenario 4: Accidental Manual Edit
+
+**Problem**: You manually edited `~/.claude/CLAUDE.md` and broke something.
+
+**Solution**:
+1. Find the most recent backup:
+   ```bash
+   ls -lt ~/.gentle-ai/backups/ | head -n 2
+   ```
+2. Restore via TUI or manually:
+   ```bash
+   cp ~/.gentle-ai/backups/20260313_123456/claude-code/CLAUDE.md ~/.claude/
+   ```
+
+**Result**: Restored to the last known good state.
+
+## Backup Retention
+
+Gentle AI does **not** automatically delete old backups. They accumulate over time:
+
+```bash
+~/.gentle-ai/backups/
+  20260313_123456/  ← Most recent
+  20260312_091523/
+  20260310_144201/
+  20260308_163042/
+  ...
+```
+
+### Manual Cleanup
+
+To free up disk space:
+
+```bash
+# List backups with sizes
+du -sh ~/.gentle-ai/backups/*
+
+# Delete old backups
+rm -rf ~/.gentle-ai/backups/20260308_163042
+```
+
+<Tip>
+Keep at least 2-3 recent backups for safety. Delete older ones once you're confident the new configuration works.
+</Tip>
+
+### Automated Cleanup Script
+
+```bash
+#!/bin/bash
+# keep-last-5-backups.sh
+
+BACKUP_DIR="$HOME/.gentle-ai/backups"
+
+# Keep only the 5 most recent backups
+ls -t "$BACKUP_DIR" | tail -n +6 | while read dir; do
+  echo "Deleting old backup: $dir"
+  rm -rf "$BACKUP_DIR/$dir"
+done
+
+echo "Cleanup complete. Kept 5 most recent backups."
+```
+
+Run periodically:
+```bash
+chmod +x keep-last-5-backups.sh
+./keep-last-5-backups.sh
+```
+
+## What Gets Backed Up
+
+### Included
+
+<Accordion title="System Prompts">
+- Claude Code: `~/.claude/CLAUDE.md`
+- OpenCode: `~/.config/opencode/AGENTS.md`
+- Gemini CLI: `~/.gemini/GEMINI.md`
+- Cursor: `~/.cursor/CURSOR.md`
+- VS Code Copilot: `Code/User/prompts/gentle-ai.instructions.md`
+</Accordion>
+
+<Accordion title="Skills Directories">
+- Claude Code: `~/.claude/skills/`
+- OpenCode: `~/.config/opencode/skills/`
+- Gemini CLI: `~/.gemini/skills/`
+- Cursor: `~/.cursor/skills/`
+- VS Code Copilot: `~/.copilot/skills/`
+</Accordion>
+
+<Accordion title="MCP Configuration">
+- Claude Code: `~/.claude/mcp/`
+- OpenCode: `~/.config/opencode/settings.json` (merged section)
+- Gemini CLI: `~/.gemini/settings.json` (merged section)
+- Cursor: `~/.cursor/mcp.json`
+- VS Code Copilot: `Code/User/mcp.json`
+</Accordion>
+
+<Accordion title="Other Agent Files">
+- Settings files (where applicable)
+- Output styles (Claude Code only)
+- Agent-specific configuration
+</Accordion>
+
+### Excluded
+
+<Warning>
+**Not backed up**:
+
+- User code and projects (not touched by Gentle AI)
+- Git repositories
+- Node modules or package installations
+- Global binaries (gga, npm packages)
+- Non-agent configuration files
+- Logs and temporary files
+</Warning>
+
+## Verifying Backups
+
+To check what's in a backup:
+
+```bash
+# View manifest
+cat ~/.gentle-ai/backups/20260313_123456/manifest.json | jq
+
+# List backed up files
+find ~/.gentle-ai/backups/20260313_123456 -type f
+
+# Compare backup to current config
+diff ~/.gentle-ai/backups/20260313_123456/claude-code/CLAUDE.md ~/.claude/CLAUDE.md
+```
+
+### Backup Size
+
+Typical backup sizes:
+
+| Config | Approximate Size |
+|--------|----------------|
+| System prompt | 10-50 KB |
+| Skills directory | 100-500 KB (11 skills) |
+| MCP config | 1-5 KB |
+| **Total per agent** | ~200-600 KB |
+| **Full backup (2 agents)** | ~500 KB - 1 MB |
+
+<Info>
+Backups are very lightweight. Even 10-20 backups typically use less than 20 MB.
+</Info>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Restore fails with permission error">
+    **Issue**: Cannot write to agent config directories.
+    
+    **Solution**:
+    ```bash
+    # Check permissions
+    ls -la ~/.claude/
+    
+    # Fix ownership if needed
+    chown -R $(whoami) ~/.claude/
+    ```
+  </Accordion>
+  
+  <Accordion title="Backup directory doesn't exist">
+    **Issue**: `~/.gentle-ai/backups/` not found.
+    
+    **Cause**: No installations have been run yet.
+    
+    **Solution**: Run your first install to create the backup directory:
+    ```bash
+    gentle-ai install --agent claude-code --preset minimal
+    ```
+  </Accordion>
+  
+  <Accordion title="Backup is corrupted or incomplete">
+    **Issue**: Backup files are missing or unreadable.
+    
+    **Solution**: Use an older backup:
+    ```bash
+    ls -lt ~/.gentle-ai/backups/
+    # Choose the second-most-recent backup
+    ```
+    
+    If all backups are corrupted, reinstall from scratch:
+    ```bash
+    gentle-ai install --agent claude-code --preset full-gentleman
+    ```
+  </Accordion>
+  
+  <Accordion title="Want to backup before manual edits">
+    **Issue**: You're about to manually edit configs and want a safety net.
+    
+    **Solution**: Create a manual backup:
+    ```bash
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    mkdir -p ~/.gentle-ai/backups/$TIMESTAMP/claude-code
+    cp -r ~/.claude/* ~/.gentle-ai/backups/$TIMESTAMP/claude-code/
+    echo "Backup created: ~/.gentle-ai/backups/$TIMESTAMP"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Test Before Keeping" icon="vial">
+    After installing, test your agent thoroughly before deleting old backups.
+  </Card>
+  <Card title="Document Changes" icon="pen">
+    Add notes to backup directories:
+    ```bash
+    echo "Full Gentleman preset" > ~/.gentle-ai/backups/20260313_123456/NOTES.txt
+    ```
+  </Card>
+  <Card title="Keep Recent Backups" icon="bookmark">
+    Retain 2-3 recent backups for quick rollback.
+  </Card>
+  <Card title="Manual Backups" icon="floppy-disk">
+    Before major manual edits, create a manual backup for safety.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Interactive Mode"
+    icon="terminal"
+    href="/guides/interactive-mode"
+  >
+    Learn to use the TUI restore feature
+  </Card>
+  <Card
+    title="CLI Mode"
+    icon="code"
+    href="/guides/cli-mode"
+  >
+    Install with confidence using dry-run
+  </Card>
+  <Card
+    title="Presets"
+    icon="sliders"
+    href="/guides/presets"
+  >
+    Try different preset configurations
+  </Card>
+  <Card
+    title="Platform Support"
+    icon="laptop"
+    href="/platforms/overview"
+  >
+    Platform-specific backup locations
+  </Card>
+</CardGroup>

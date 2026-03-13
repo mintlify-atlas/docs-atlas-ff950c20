@@ -1,0 +1,209 @@
+---
+title: What It Does
+description: Understanding the Gentle AI ecosystem configurator
+---
+
+## The Problem
+
+You've installed an AI coding agent like Claude Code, OpenCode, or Cursor. It writes code, answers questions, and helps with development. But something's missing:
+
+- **No memory** — It forgets everything from previous sessions
+- **No workflow** — It jumps straight to code without planning
+- **No patterns** — It doesn't know your team's conventions or best practices
+- **No context** — It can't look up current library documentation
+- **Generic behavior** — It doesn't teach, just executes
+
+<Warning>
+**Before Gentle AI**: Your agent is just a chatbot that writes code.
+</Warning>
+
+## The Solution
+
+Gentle AI is an **ecosystem configurator** that transforms basic AI agents into powerful development partners by injecting:
+
+<CardGroup cols={2}>
+  <Card title="Engram" icon="brain">
+    **Persistent Memory**
+    
+    Cross-session memory that survives context resets. Your agent remembers:
+    - Project architecture decisions
+    - Bug investigations and fixes
+    - Coding patterns and conventions
+    - Past conversations and context
+  </Card>
+  
+  <Card title="SDD Workflow" icon="diagram-project">
+    **Spec-Driven Development**
+    
+    9-phase structured workflow that enforces:
+    - Exploration before proposing changes
+    - Specifications before implementation
+    - Design decisions with rationale
+    - Task breakdown and verification
+  </Card>
+  
+  <Card title="Skills" icon="book">
+    **Curated Patterns**
+    
+    11 pre-built skills including:
+    - Complete SDD workflow (9 skills)
+    - Go testing with Bubbletea TUI patterns
+    - Skill creation framework
+    - Auto-load based on project context
+  </Card>
+  
+  <Card title="MCP Tools" icon="toolbox">
+    **Live Documentation**
+    
+    Context7 MCP server provides:
+    - Real-time framework docs (React, Next.js, etc.)
+    - Library API references
+    - Up-to-date examples
+    - No hallucinated outdated info
+  </Card>
+</CardGroup>
+
+## How It Works
+
+<Steps>
+  <Step title="Detect Your Environment">
+    Gentle AI scans your system to find:
+    - Installed AI agents (Claude Code, OpenCode, Gemini CLI, Cursor, VS Code Copilot)
+    - Operating system and architecture
+    - Available package managers
+    - Required dependencies (git, curl, node, npm)
+  </Step>
+  
+  <Step title="Configure Agents">
+    For each selected agent, it:
+    - Injects the SDD orchestrator into system prompts
+    - Writes skill files to the agent's skills directory
+    - Configures MCP servers for tool access
+    - Applies persona instructions
+    - Sets up security permissions
+  </Step>
+  
+  <Step title="Install Dependencies">
+    Automatically installs missing components:
+    - npm packages (Context7 MCP server)
+    - System tools via platform package managers
+    - The GGA binary for multi-model workflows (optional)
+  </Step>
+  
+  <Step title="Verify Installation">
+    Post-installation health checks confirm:
+    - System prompts are properly injected
+    - Skill files are present and readable
+    - MCP configs are valid JSON
+    - Dependencies are executable
+  </Step>
+</Steps>
+
+## What Gets Configured
+
+### System Prompt Injection
+
+Gentle AI injects the **SDD orchestrator** (agent-teams-lite) into each agent's system prompt file:
+
+- **Claude Code**: Marker-based injection into `~/.claude/CLAUDE.md`
+- **OpenCode**: Full replacement of `~/.config/opencode/AGENTS.md`
+- **Gemini CLI**: Marker-based injection into `~/.gemini/GEMINI.md`
+- **Cursor**: Marker-based injection into `~/.cursor/CURSOR.md`
+- **VS Code Copilot**: Separate file at `Code/User/prompts/gentle-ai.instructions.md`
+
+<Accordion title="Why different strategies?">
+Each agent has different system prompt conventions:
+
+- **Claude Code** uses markdown section markers (`<!-- gentle-ai:ID -->`), allowing non-destructive injection that preserves user customizations
+- **OpenCode** expects a single unified AGENTS.md file that replaces the default
+- **Gemini CLI** uses markdown section markers similar to Claude Code
+- **Cursor** uses marker-based injection with `.cursorrules` support
+- **VS Code Copilot** loads instructions from a separate dedicated file
+
+Gentle AI respects each agent's conventions while ensuring consistent ecosystem behavior.
+</Accordion>
+
+### Skills Directory
+
+Each agent gets a `skills/` directory populated with:
+
+| Category | Skills |
+|----------|--------|
+| SDD Workflow | sdd-init, sdd-explore, sdd-propose, sdd-spec, sdd-design, sdd-tasks, sdd-apply, sdd-verify, sdd-archive |
+| Foundation | go-testing, skill-creator |
+
+Skills are markdown files (SKILL.md format) that agents load based on context detection.
+
+### MCP Configuration
+
+MCP (Model Context Protocol) servers are configured per agent:
+
+- **Claude Code**: Separate JSON files in `~/.claude/mcp/` (e.g., `context7.json`)
+- **OpenCode**: Merged into `~/.config/opencode/settings.json` under `mcpServers`
+- **Gemini CLI**: Merged into `~/.gemini/settings.json` under `mcpServers`
+- **Cursor**: Single config file at `~/.cursor/mcp.json`
+- **VS Code Copilot**: Merged into `Code/User/mcp.json`
+
+### Persona Instructions
+
+Depending on your selection, agents receive:
+
+- **Gentleman**: Teaching-oriented mentor who pushes back on bad practices, explains the "why", uses direct language
+- **Neutral**: Clean professional tone with no personality
+- **Custom**: Your own persona instructions
+
+## What It Doesn't Do
+
+<Warning>
+Gentle AI is **NOT**:
+
+- An AI agent installer (agents must be installed separately)
+- A replacement for your agent's core functionality
+- A cloud service or API (everything runs locally)
+- A training or fine-tuning tool (it configures via prompts and files)
+</Warning>
+
+## Relationship to Gentleman.Dots
+
+| | Gentleman.Dots | Gentle AI |
+|--|---------------|----------|
+| **Purpose** | Dev environment (editors, shells, terminals) | AI development layer (agents, memory, skills) |
+| **Installs** | Neovim, Fish/Zsh, Tmux/Zellij, Ghostty | Configures Claude Code, OpenCode, Gemini CLI, Cursor, VS Code Copilot |
+| **Overlap** | None — complementary | None — different layer |
+
+<Tip>
+Install **Gentleman.Dots** first for your dev environment, then **Gentle AI** for the AI layer on top.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Architecture"
+    icon="sitemap"
+    href="/concepts/architecture"
+  >
+    Learn how the codebase is structured
+  </Card>
+  <Card
+    title="Components"
+    icon="puzzle-piece"
+    href="/concepts/components"
+  >
+    Deep dive into each ecosystem component
+  </Card>
+  <Card
+    title="Agents"
+    icon="robot"
+    href="/concepts/agents"
+  >
+    Understand agent support tiers and strategies
+  </Card>
+  <Card
+    title="Quickstart"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Get started with Gentle AI
+  </Card>
+</CardGroup>

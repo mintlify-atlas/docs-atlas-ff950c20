@@ -1,0 +1,174 @@
+---
+title: 'gentle-ai version'
+description: 'Display version information'
+---
+
+## Overview
+
+The `version` command displays the current version of the `gentle-ai` binary.
+
+## Usage
+
+```bash
+gentle-ai version
+gentle-ai --version
+gentle-ai -v
+```
+
+All three forms are equivalent.
+
+## Output
+
+```bash
+$ gentle-ai version
+gentle-ai 1.0.0
+```
+
+The output format is:
+
+```
+gentle-ai <version>
+```
+
+Where `<version>` is the semantic version (e.g., `1.0.0`) or `dev` for development builds.
+
+## Version Embedding
+
+The version is embedded at build time using Go linker flags (`-ldflags`):
+
+```bash
+go build -ldflags "-X github.com/gentleman-programming/gentle-ai/internal/app.Version=1.0.0" \
+  -o gentle-ai \
+  ./cmd/gentle-ai
+```
+
+Source: `internal/app/app.go:22`
+
+```go
+// Version is set from main via ldflags at build time.
+var Version = "dev"
+```
+
+## Development Builds
+
+When building without ldflags (e.g., `go run`, `go build`), the version defaults to `dev`:
+
+```bash
+$ go run ./cmd/gentle-ai version
+gentle-ai dev
+```
+
+## Release Builds
+
+Official releases use GoReleaser to embed the version automatically:
+
+```yaml
+# .goreleaser.yaml
+builds:
+  - ldflags:
+      - -X github.com/gentleman-programming/gentle-ai/internal/app.Version={{.Version}}
+```
+
+GitHub release binaries always include the version.
+
+## Exit Codes
+
+| Code | Meaning |
+|------|--------|
+| 0 | Success |
+
+The version command always exits with code 0.
+
+## Examples
+
+### Check installed version
+
+```bash
+$ gentle-ai version
+gentle-ai 1.0.0
+```
+
+### Compare with latest release
+
+Combine with [`gentle-ai update`](/cli/update) to check if you're running the latest version:
+
+```bash
+$ gentle-ai version
+gentle-ai 1.0.0
+
+$ gentle-ai update
+Update Check
+============
+
+  [ok] gentle-ai    installed: 1.0.0       latest: 1.0.0
+  ...
+```
+
+### Use in scripts
+
+```bash
+#!/bin/bash
+VERSION=$(gentle-ai version | awk '{print $2}')
+echo "Running gentle-ai version: $VERSION"
+
+if [[ "$VERSION" == "dev" ]]; then
+    echo "Warning: Running development build"
+fi
+```
+
+## Version vs Update Commands
+
+| Command | Purpose | Output |
+|---------|---------|--------|
+| `gentle-ai version` | Show local version of gentle-ai only | `gentle-ai 1.0.0` |
+| `gentle-ai update` | Check for updates to all ecosystem tools | Table with gentle-ai, engram, gga versions |
+
+## Semantic Versioning
+
+Gentleman AI follows semantic versioning (semver):
+
+```
+MAJOR.MINOR.PATCH
+1.0.0
+```
+
+- **MAJOR** - Breaking changes
+- **MINOR** - New features (backward compatible)
+- **PATCH** - Bug fixes (backward compatible)
+
+See [semver.org](https://semver.org) for details.
+
+## Version in TUI
+
+The TUI welcome screen displays the version:
+
+```bash
+$ gentle-ai
+
+╔════════════════════════════════════════════════════╗
+║  AI Gentle Stack                                   ║
+║  Version 1.0.0                                     ║
+╚════════════════════════════════════════════════════╝
+```
+
+## Related Commands
+
+- [`gentle-ai update`](/cli/update) - Check for updates to ecosystem tools
+- [`gentle-ai install`](/cli/install) - Install/update ecosystem components
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Update Check" icon="rotate" href="/cli/update">
+    Check for available updates
+  </Card>
+  <Card title="Installation" icon="download" href="/quickstart">
+    Install Gentleman AI
+  </Card>
+  <Card title="Building" icon="hammer" href="/development/building">
+    Build from source
+  </Card>
+  <Card title="Releases" icon="tag" href="https://github.com/Gentleman-Programming/gentle-ai/releases">
+    View release notes
+  </Card>
+</CardGroup>

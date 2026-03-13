@@ -1,0 +1,264 @@
+---
+title: Persona
+description: Choose between Gentleman, neutral, or custom AI behavior
+---
+
+# Persona
+
+The Persona component configures your AI agent's personality and communication style. Choose between the **Gentleman** mentor persona, a **neutral** assistant, or keep your **custom** configuration.
+
+## What is Persona?
+
+Persona controls:
+- **Tone and style**: How the agent communicates (mentor vs. assistant)
+- **Teaching approach**: When to explain vs. just provide answers
+- **Output formatting**: Code style, markdown usage, emojis
+- **Decision-making**: How proactive or conservative the agent is
+
+Think of it as the "character" your AI agent plays during conversations.
+
+## Persona Options
+
+### Gentleman (Default)
+
+**Philosophy**: Senior architect mentor who's helpful first, but will challenge you when it matters.
+
+**Characteristics**:
+- Teaches patterns, not just solutions
+- Questions design decisions when they smell wrong
+- Provides context for "why", not just "what"
+- Uses precise technical language
+- Respectfully disagrees when necessary
+
+**Best for**: Developers who want to improve their craft, teams building production systems.
+
+### Neutral
+
+**Philosophy**: Direct, technically precise assistant.
+
+**Characteristics**:
+- Minimal commentary
+- Focuses on accuracy and clarity
+- No personality or teaching moments
+- Straight answers to straight questions
+
+**Best for**: Quick tasks, scripting, automation, users who prefer minimal interaction.
+
+### Custom
+
+**Philosophy**: Keep your existing agent configuration.
+
+**Characteristics**:
+- Gentle AI makes no changes to system prompts
+- You maintain full control over tone and style
+- Other components (SDD, Engram, etc.) still install
+
+**Best for**: Users with carefully tuned agent configs, teams with existing personas.
+
+## Configuration Files Written
+
+Persona modifies system prompt files based on your agent and choice:
+
+<CardGroup cols={2}>
+  <Card title="Claude Code (Gentleman)" icon="wave">
+    Injects markdown section into `~/.config/claude-code/.system-prompt.md`.
+    
+    Also writes output style to `~/.config/claude-code/output-styles/gentleman.md` and sets `"outputStyle": "Gentleman"` in settings.
+  </Card>
+  <Card title="OpenCode (Gentleman)" icon="code">
+    Writes full persona content to `~/.config/opencode/AGENTS.md`.
+    
+    Also creates agent definitions in `opencode.json` for Tab-switchable agents (`gentleman` and `sdd-orchestrator`).
+  </Card>
+  <Card title="Generic Agents (Gentleman)" icon="file">
+    Replaces system prompt file with full persona content from `internal/assets/generic/persona-gentleman.md`.
+  </Card>
+  <Card title="All Agents (Neutral)" icon="minus">
+    Writes minimal prompt: "Be helpful, direct, and technically precise. Focus on accuracy and clarity."
+  </Card>
+</CardGroup>
+
+Source: `internal/components/persona/inject.go:28-133`
+
+## System Prompt Strategies
+
+The persona component uses different strategies based on agent capabilities:
+
+### 1. Markdown Sections Strategy
+
+Used by: **Claude Code**
+
+Injects persona content as a named section that can be updated independently:
+
+```markdown
+<!-- BEGIN SECTION: persona -->
+# The Gentleman
+
+You are a Senior Architect mentor...
+<!-- END SECTION: persona -->
+```
+
+This allows multiple components (Persona, Engram, SDD) to inject sections without conflicts.
+
+Source: `internal/components/persona/inject.go:49-62`
+
+### 2. File Replace Strategy
+
+Used by: **Generic agents** (Gemini CLI, Cursor, VS Code Copilot)
+
+Replaces the entire system prompt file:
+
+```go
+writeFileAtomic(promptPath, personaContent, 0o644)
+```
+
+Source: `internal/components/persona/inject.go:64-71`
+
+### 3. Instructions File Strategy
+
+Used by: **Windsurf** (experimental)
+
+Wraps persona content with frontmatter:
+
+```markdown
+---
+name: Gentle AI Persona
+description: Gentleman persona with SDD orchestration and Engram protocol
+applyTo: "**"
+---
+
+{persona content}
+```
+
+Source: `internal/components/persona/inject.go:73-81`, `194-202`
+
+## Gentleman Persona Details
+
+### Agent-Specific Content
+
+The Gentleman persona is tailored per agent:
+
+| Agent | Asset File | Notes |
+|-------|-----------|-------|
+| Claude Code | `claude/persona-gentleman.md` | Includes Claude-specific tool usage patterns |
+| OpenCode | `opencode/persona-gentleman.md` | References OpenCode agent system, includes skills table |
+| Generic | `generic/persona-gentleman.md` | Universal content, includes SDD orchestrator |
+
+Source: `internal/components/persona/inject.go:136-155`
+
+### Output Style (Claude Code)
+
+For Claude Code, the Gentleman persona also installs an **output style**:
+
+1. Writes `~/.config/claude-code/output-styles/gentleman.md` with formatting rules
+2. Merges `"outputStyle": "Gentleman"` into settings.json
+
+This controls:
+- Code formatting in responses
+- Markdown structure
+- Explanation style
+
+Source: `internal/components/persona/inject.go:107-131`
+
+### OpenCode Agent Definitions
+
+For OpenCode, the persona component creates **Tab-switchable agents**:
+
+```json
+{
+  "agent": {
+    "gentleman": {
+      "mode": "primary",
+      "description": "Senior Architect mentor - helpful first, challenging when it matters",
+      "prompt": "{file:./AGENTS.md}",
+      "tools": {
+        "write": true,
+        "edit": true
+      }
+    },
+    "sdd-orchestrator": {
+      "mode": "all",
+      "description": "Gentleman personality + SDD delegate-only orchestrator",
+      "prompt": "{file:./AGENTS.md}",
+      "tools": {
+        "read": true,
+        "write": true,
+        "edit": true,
+        "bash": true
+      }
+    }
+  }
+}
+```
+
+Users can press Tab to switch between agents during conversations.
+
+Source: `internal/components/persona/inject.go:26`
+
+## Philosophy: Professional Objectivity
+
+From the Gentleman persona:
+
+> Prioritize technical accuracy and truthfulness over validating the user's beliefs. Focus on facts and problem-solving, providing direct, objective technical info without any unnecessary superlatives, praise, or emotional validation. It is best for the user if OpenCode honestly applies the same rigorous standards to all ideas and disagrees when necessary, even if it may not be what the user wants to hear.
+
+This means:
+- **Respectful disagreement**: Point out flawed assumptions
+- **Challenge bad ideas**: Don't rubber-stamp poor designs
+- **Teach correct patterns**: Explain why alternatives are better
+- **No false praise**: Accurate feedback over validation
+
+## Neutral Persona Content
+
+```markdown
+Be helpful, direct, and technically precise. Focus on accuracy and clarity.
+```
+
+That's it. No personality, no teaching moments, just accurate assistance.
+
+Source: `internal/components/persona/inject.go:18`
+
+## Custom Persona Behavior
+
+When you choose **Custom** persona:
+
+```go
+if persona == model.PersonaCustom {
+    return InjectionResult{}, nil // No-op
+}
+```
+
+Gentle AI:
+- Does NOT modify any system prompt files
+- Does NOT write output styles
+- Does NOT create agent definitions
+- Still installs other components (Engram, SDD, etc.)
+
+Source: `internal/components/persona/inject.go:33-36`
+
+## FAQ
+
+<Accordion title="Can I switch personas after installation?">
+  Yes! Run `gentle install` again and choose a different persona. The installer will update your system prompt files.
+</Accordion>
+
+<Accordion title="What if I choose Gentleman but want to tweak it?">
+  Edit the system prompt file directly (e.g., `~/.config/claude-code/.system-prompt.md`). Your changes persist until you run `gentle install` again.
+</Accordion>
+
+<Accordion title="Does Custom persona break other components?">
+  No. Custom only affects system prompts. Engram, SDD, Skills, and other components install normally.
+</Accordion>
+
+<Accordion title="Why does OpenCode get agent definitions while others don't?">
+  OpenCode has a Tab-based agent switching feature. Gentle AI leverages this to provide `gentleman` (primary) and `sdd-orchestrator` (SDD workflows) as separate agents you can toggle.
+</Accordion>
+
+<Accordion title="What's the difference between Gentleman and neutral for code quality?">
+  Both produce correct code. Gentleman adds teaching context ("I did X because Y") and questions design decisions. Neutral just writes the code without commentary.
+</Accordion>
+
+## Related Components
+
+- [SDD](/components/sdd) - Gentleman persona includes SDD orchestrator
+- [Permissions](/components/permissions) - Works alongside persona for tool usage guardrails
+- [Theme](/components/theme) - Future: Visual styling to match Gentleman aesthetic

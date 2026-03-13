@@ -1,0 +1,445 @@
+---
+title: Linux
+description: Installing and configuring Gentle AI on Linux distributions
+---
+
+## Supported Distributions
+
+Gentle AI officially supports:
+
+<CardGroup cols={3}>
+  <Card title="Ubuntu" icon="ubuntu">
+    20.04 LTS (Focal) or later
+    
+    Includes derivatives (Pop!_OS, Linux Mint)
+  </Card>
+  <Card title="Debian" icon="debian">
+    11 (Bullseye) or later
+    
+    Stable, Testing, Unstable
+  </Card>
+  <Card title="Arch Linux" icon="arch-linux">
+    Rolling release
+    
+    Includes derivatives (Manjaro, EndeavourOS)
+  </Card>
+</CardGroup>
+
+<Info>
+Other distributions may work but are not officially tested. Community contributions welcome!
+</Info>
+
+## Installation
+
+### Quick Install (All Distros)
+
+Use the curl installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/scripts/install.sh | bash
+```
+
+This detects your distribution and installs the correct binary.
+
+### Distribution-Specific
+
+<Tabs>
+  <Tab title="Ubuntu / Debian">
+    **Package Manager**: apt
+    
+    Install dependencies:
+    ```bash
+    sudo apt update
+    sudo apt install git curl
+    ```
+    
+    Install Node.js:
+    ```bash
+    # Option 1: Official NodeSource repository (recommended)
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+    sudo apt install -y nodejs
+    
+    # Option 2: Ubuntu/Debian packages (older version)
+    sudo apt install nodejs npm
+    ```
+    
+    Install Gentle AI:
+    ```bash
+    # Download release
+    wget https://github.com/Gentleman-Programming/gentle-ai/releases/download/v1.0.0/gentle-ai_1.0.0_linux_amd64.tar.gz
+    tar -xzf gentle-ai_1.0.0_linux_amd64.tar.gz
+    sudo mv gentle-ai /usr/local/bin/
+    ```
+  </Tab>
+  
+  <Tab title="Arch Linux">
+    **Package Manager**: pacman
+    
+    Install dependencies:
+    ```bash
+    sudo pacman -S git curl nodejs npm
+    ```
+    
+    Install Gentle AI:
+    ```bash
+    # Option 1: Download release
+    wget https://github.com/Gentleman-Programming/gentle-ai/releases/download/v1.0.0/gentle-ai_1.0.0_linux_amd64.tar.gz
+    tar -xzf gentle-ai_1.0.0_linux_amd64.tar.gz
+    sudo mv gentle-ai /usr/local/bin/
+    
+    # Option 2: AUR (community-maintained, if available)
+    # yay -S gentle-ai  # or paru, aurutils, etc.
+    ```
+  </Tab>
+  
+  <Tab title="Homebrew on Linux">
+    **Homebrew** works on Linux too!
+    
+    Install Homebrew:
+    ```bash
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    
+    # Add to PATH (follow installer instructions)
+    echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.bashrc
+    source ~/.bashrc
+    ```
+    
+    Install Gentle AI:
+    ```bash
+    brew tap Gentleman-Programming/homebrew-tap
+    brew install gentle-ai
+    ```
+    
+    <Tip>
+    Homebrew on Linux provides consistent cross-platform package management. Gentle AI prefers brew if installed.
+    </Tip>
+  </Tab>
+</Tabs>
+
+### Go Install (All Distros)
+
+If you have Go 1.24+:
+
+```bash
+go install github.com/gentleman-programming/gentle-ai/cmd/gentle-ai@latest
+
+# Add to PATH
+echo 'export PATH="$HOME/go/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+## Derivative Detection
+
+Gentle AI detects distribution derivatives via `/etc/os-release`:
+
+<Accordion title="Ubuntu Derivatives">
+**Detected as Ubuntu**:
+- Pop!_OS (ID_LIKE=ubuntu)
+- Linux Mint (ID_LIKE=ubuntu)
+- elementary OS (ID_LIKE=ubuntu)
+- Zorin OS (ID_LIKE=ubuntu)
+
+Uses `apt` package manager.
+</Accordion>
+
+<Accordion title="Arch Derivatives">
+**Detected as Arch**:
+- Manjaro (ID_LIKE=arch)
+- EndeavourOS (ID_LIKE=arch)
+- Garuda Linux (ID_LIKE=arch)
+
+Uses `pacman` package manager.
+</Accordion>
+
+<Accordion title="Debian Derivatives">
+**Detected as Debian**:
+- Pure Debian (ID=debian)
+- Devuan (ID_LIKE=debian)
+
+Uses `apt` package manager.
+</Accordion>
+
+## Dependencies
+
+### Required Tools
+
+| Tool | Ubuntu/Debian | Arch | Check |
+|------|--------------|------|-------|
+| git | `sudo apt install git` | `sudo pacman -S git` | `git --version` |
+| curl | `sudo apt install curl` | `sudo pacman -S curl` | `curl --version` |
+| node | `sudo apt install nodejs` | `sudo pacman -S nodejs` | `node --version` |
+| npm | `sudo apt install npm` | `sudo pacman -S npm` | `npm --version` |
+
+### Node Version Management
+
+Recommended: Use nvm or fnm to avoid npm permission issues.
+
+<CodeGroup>
+
+```bash nvm
+# Install nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+
+# Reload shell
+source ~/.bashrc
+
+# Install node
+nvm install node
+nvm use node
+```
+
+```bash fnm
+# Install fnm
+curl -fsSL https://fnm.vercel.app/install | bash
+
+# Reload shell
+source ~/.bashrc
+
+# Install node
+fnm install --lts
+```
+
+</CodeGroup>
+
+## Configuration Paths
+
+### Agent Directories
+
+```bash
+~/.claude/                    # Claude Code
+~/.config/opencode/           # OpenCode
+~/.gemini/                    # Gemini CLI
+~/.cursor/                    # Cursor
+~/.copilot/                   # VS Code Copilot (skills)
+~/.config/Code/User/          # VS Code settings
+```
+
+### Gentle AI Data
+
+```bash
+~/.gentle-ai/
+  backups/                    # Configuration snapshots
+  logs/                       # Installation logs (future)
+```
+
+## Linux-Specific Features
+
+### Terminal Compatibility
+
+The Bubbletea TUI works in all modern Linux terminals:
+
+- **GNOME Terminal**
+- **Konsole** (KDE)
+- **Alacritty**
+- **Kitty**
+- **Terminator**
+- **Tilix**
+- **st** (suckless terminal)
+
+<Tip>
+For best results, use a terminal with 256 color support. Most modern terminals have this by default.
+</Tip>
+
+### SSH Compatibility
+
+The TUI works perfectly over SSH:
+
+```bash
+# SSH into server
+ssh user@server
+
+# Run Gentle AI
+gentle-ai
+```
+
+No X11 forwarding or GUI required.
+
+### Tmux / Screen Support
+
+Gentle AI TUI works inside tmux and screen:
+
+```bash
+# Inside tmux session
+tmux new -s gentle-ai
+gentle-ai
+```
+
+Ensure `$TERM` is set correctly:
+```bash
+echo $TERM
+# Should be screen-256color or tmux-256color
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Command not found: gentle-ai">
+    **Issue**: Binary not in PATH.
+    
+    **Solution**:
+    ```bash
+    # Check where it's installed
+    which gentle-ai
+    
+    # If in /usr/local/bin, ensure it's in PATH
+    echo $PATH | grep /usr/local/bin
+    
+    # If not, add to ~/.bashrc or ~/.zshrc
+    echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.bashrc
+    source ~/.bashrc
+    ```
+  </Accordion>
+  
+  <Accordion title="npm EACCES permission errors">
+    **Issue**: Cannot install npm packages globally without sudo.
+    
+    **Solution**: Use nvm/fnm (recommended) or fix npm permissions:
+    ```bash
+    mkdir ~/.npm-global
+    npm config set prefix '~/.npm-global'
+    echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc
+    source ~/.bashrc
+    ```
+  </Accordion>
+  
+  <Accordion title="TUI rendering issues">
+    **Issue**: Broken layout, missing colors, or garbled text.
+    
+    **Solution**: Check terminal color support:
+    ```bash
+    # Check TERM
+    echo $TERM
+    # Should be xterm-256color or similar
+    
+    # Test 256 colors
+    for i in {0..255}; do printf "\x1b[38;5;${i}m%03d " "$i"; done; echo
+    
+    # If broken, set TERM
+    export TERM=xterm-256color
+    echo 'export TERM=xterm-256color' >> ~/.bashrc
+    ```
+  </Accordion>
+  
+  <Accordion title="Missing /etc/os-release">
+    **Issue**: Distro detection fails.
+    
+    **Solution**: Your distro is very old or non-standard. Manually install dependencies:
+    ```bash
+    # Generic Linux dependencies
+    # Install git, curl, nodejs, npm using your distro's package manager
+    
+    # Then download and install Gentle AI manually
+    wget <release-url>
+    tar -xzf gentle-ai_1.0.0_linux_amd64.tar.gz
+    sudo mv gentle-ai /usr/local/bin/
+    ```
+  </Accordion>
+  
+  <Accordion title="Permission denied when running">
+    **Issue**: Binary is not executable.
+    
+    **Solution**:
+    ```bash
+    chmod +x /usr/local/bin/gentle-ai
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Docker E2E Testing
+
+Gentle AI is tested in Docker containers:
+
+### Ubuntu Container
+
+```bash
+# Run Ubuntu E2E tests
+docker build -t gentle-ai-ubuntu -f e2e/ubuntu/Dockerfile .
+docker run --rm gentle-ai-ubuntu
+```
+
+### Arch Container
+
+```bash
+# Run Arch E2E tests
+docker build -t gentle-ai-arch -f e2e/arch/Dockerfile .
+docker run --rm gentle-ai-arch
+```
+
+### Full Test Suite
+
+```bash
+RUN_FULL_E2E=1 RUN_BACKUP_TESTS=1 ./e2e/docker-test.sh
+```
+
+## Distribution-Specific Notes
+
+### Ubuntu / Pop!_OS / Linux Mint
+
+- **NodeSource repository** recommended for latest Node.js
+- Default Ubuntu node packages are often outdated
+- Use `apt` for system dependencies
+- Derivatives are auto-detected
+
+### Arch / Manjaro / EndeavourOS
+
+- Packages are always up-to-date (rolling release)
+- Use `pacman` for system dependencies
+- AUR packages may be available (community-maintained)
+- Derivatives are auto-detected
+
+### Debian
+
+- Stable = older packages (use NodeSource for Node.js)
+- Testing/Unstable = newer packages
+- Uses `apt` like Ubuntu
+- Very stable base
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use nvm/fnm" icon="node">
+    Avoid npm permission issues
+  </Card>
+  <Card title="Modern Terminal" icon="terminal">
+    Alacritty or Kitty for best TUI
+  </Card>
+  <Card title="Keep Updated" icon="arrows-rotate">
+    Regularly update system packages
+  </Card>
+  <Card title="SSH Compatible" icon="server">
+    Works great over SSH
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Quickstart"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Complete your first installation
+  </Card>
+  <Card
+    title="Interactive Mode"
+    icon="terminal"
+    href="/guides/interactive-mode"
+  >
+    Learn the TUI workflow
+  </Card>
+  <Card
+    title="Platform Overview"
+    icon="laptop"
+    href="/platforms/overview"
+  >
+    Compare all platforms
+  </Card>
+  <Card
+    title="macOS Setup"
+    icon="apple"
+    href="/platforms/macos"
+  >
+    macOS-specific guide
+  </Card>
+</CardGroup>

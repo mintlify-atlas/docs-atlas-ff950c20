@@ -1,0 +1,437 @@
+---
+title: GGA (Gentleman Guardian Angel)
+description: AI provider switcher for resilience and cost optimization
+---
+
+# GGA (Gentleman Guardian Angel)
+
+GGA (Gentleman Guardian Angel) is a transparent proxy that sits between your AI agent and model providers, enabling automatic failover and provider switching without changing your agent's configuration.
+
+## What is GGA?
+
+GGA provides:
+- **Automatic failover**: Switch providers when one is down or rate-limited
+- **Cost optimization**: Route requests to cheaper providers for simple tasks
+- **Latency routing**: Prefer faster providers for quick queries
+- **Provider abstraction**: Change backends without reconfiguring your agent
+- **Unified billing**: Track usage across providers in one place
+
+## How It Works
+
+GGA runs as a local proxy server that:
+
+1. Receives OpenAI-compatible API requests from your agent
+2. Routes them to the best available provider (OpenAI, Anthropic, Google, etc.)
+3. Handles authentication with each provider
+4. Returns responses in the expected format
+5. Logs usage and switches providers on failure
+
+```
+┌─────────────┐       ┌─────────────┐       ┌──────────────┐
+│  AI Agent   │──────▶│     GGA     │──────▶│   OpenAI     │
+│ (Claude Code│       │   (proxy)   │       │   Anthropic  │
+│  OpenCode)  │◀──────│             │◀──────│   Google     │
+└─────────────┘       └─────────────┘       └──────────────┘
+```
+
+Your agent talks to GGA using OpenAI's API format, and GGA translates to the actual provider's format.
+
+## Installation
+
+GGA is installed as a separate binary during `gentle install`:
+
+```bash
+# macOS (Homebrew)
+brew tap gentleman-programming/tap
+brew install gga
+
+# Linux (Binary)
+curl -fsSL https://raw.githubusercontent.com/gentleman-programming/gga/main/install.sh | sh
+
+# Windows (Scoop)
+scoop bucket add gentleman-programming https://github.com/gentleman-programming/scoop-bucket
+scoop install gga
+```
+
+Source: `internal/components/gga/install.go:9-11`
+
+## Configuration
+
+GGA uses a config file to define provider priorities and credentials:
+
+### Default Location
+
+```
+~/.config/gga/config.yaml
+```
+
+### Example Configuration
+
+```yaml
+# Provider credentials
+providers:
+  openai:
+    api_key: "sk-..."
+    org_id: "org-..."
+  anthropic:
+    api_key: "sk-ant-..."
+  google:
+    api_key: "AIza..."
+  azure:
+    endpoint: "https://your-resource.openai.azure.com"
+    api_key: "..."
+    deployment: "gpt-4"
+
+# Routing rules
+routing:
+  # Default provider for all requests
+  default: openai
+
+  # Fallback chain if default fails
+  fallback:
+    - anthropic
+    - google
+
+  # Model-specific routing
+  models:
+    gpt-4: openai
+    claude-3-5-sonnet-latest: anthropic
+    gemini-2.0-flash-exp: google
+
+  # Cost-based routing for simple queries
+  cost_routing:
+    enabled: true
+    max_tokens: 500  # Use cheaper providers for responses under 500 tokens
+    providers:
+      - google  # Gemini Flash is cheapest
+      - openai  # GPT-4o-mini fallback
+
+# Health checks
+health:
+  interval: 60s
+  timeout: 10s
+  retry_after: 300s  # Wait 5 minutes before retrying a failed provider
+
+# Logging
+logging:
+  level: info
+  file: ~/.config/gga/logs/gga.log
+```
+
+## Routing Strategies
+
+### 1. Default + Fallback
+
+Simplest strategy:
+
+```yaml
+routing:
+  default: openai
+  fallback:
+    - anthropic
+    - google
+```
+
+**Behavior**: Try OpenAI first. If it fails (rate limit, downtime), try Anthropic, then Google.
+
+### 2. Model-Specific Routing
+
+Route based on model name:
+
+```yaml
+routing:
+  models:
+    gpt-4: openai
+    claude-3-5-sonnet-latest: anthropic
+    gemini-2.0-flash-exp: google
+  default: openai
+```
+
+**Behavior**: If agent requests `gpt-4`, route to OpenAI. If it requests `claude-3-5-sonnet-latest`, route to Anthropic. Otherwise use default.
+
+### 3. Cost-Based Routing
+
+Use cheaper providers for simple queries:
+
+```yaml
+routing:
+  cost_routing:
+    enabled: true
+    max_tokens: 500
+    providers:
+      - google
+      - openai
+```
+
+**Behavior**: For expected short responses (less than 500 tokens), use Google Gemini (cheapest). For longer responses, use default provider.
+
+### 4. Latency-Based Routing
+
+```yaml
+routing:
+  latency_routing:
+    enabled: true
+    max_latency_ms: 2000
+    providers:
+      - google  # Gemini is often fastest
+      - openai
+```
+
+**Behavior**: Track response times. Prefer providers with lower latency.
+
+## Running GGA
+
+### Start the Proxy
+
+```bash
+# Start GGA on default port (8080)
+gga serve
+
+# Start on custom port
+gga serve --port 8081
+
+# Run in background
+gga serve --daemon
+
+# With custom config
+gga serve --config ~/.config/gga/custom.yaml
+```
+
+### Point Your Agent to GGA
+
+Configure your AI agent to use GGA as the API endpoint:
+
+**OpenAI-compatible agents**:
+```bash
+export OPENAI_API_BASE="http://localhost:8080/v1"
+export OPENAI_API_KEY="any-key"  # GGA uses keys from config.yaml
+```
+
+**OpenCode**:
+```json
+{
+  "provider": {
+    "openai": {
+      "baseUrl": "http://localhost:8080/v1",
+      "apiKey": "any-key"
+    }
+  }
+}
+```
+
+**Claude Code**:
+```json
+{
+  "apiEndpoint": "http://localhost:8080/v1"
+}
+```
+
+## Health Checks
+
+GGA continuously monitors provider health:
+
+```yaml
+health:
+  interval: 60s        # Check every 60 seconds
+  timeout: 10s         # Request timeout
+  retry_after: 300s    # Wait 5 minutes before retrying a failed provider
+```
+
+When a provider fails:
+1. GGA marks it as unhealthy
+2. Requests route to fallback providers
+3. GGA retries the failed provider after `retry_after`
+4. If successful, provider returns to rotation
+
+## Usage Tracking
+
+GGA logs every request:
+
+```json
+{
+  "timestamp": "2026-03-13T10:15:30Z",
+  "model": "gpt-4",
+  "provider": "openai",
+  "prompt_tokens": 1500,
+  "completion_tokens": 800,
+  "total_tokens": 2300,
+  "latency_ms": 1200,
+  "cost_usd": 0.07,
+  "status": "success"
+}
+```
+
+View usage stats:
+
+```bash
+# Today's usage
+gga stats --today
+
+# Last 7 days
+gga stats --days 7
+
+# By provider
+gga stats --by-provider
+
+# By model
+gga stats --by-model
+
+# Cost breakdown
+gga stats --cost
+```
+
+## Failover Example
+
+Scenario: OpenAI rate limit during peak hours
+
+```yaml
+routing:
+  default: openai
+  fallback:
+    - anthropic
+    - google
+```
+
+**What happens**:
+
+1. Agent sends request → GGA
+2. GGA routes to OpenAI
+3. OpenAI returns 429 (rate limit)
+4. GGA immediately retries with Anthropic
+5. Anthropic succeeds → response returned to agent
+6. GGA marks OpenAI as temporarily unhealthy
+7. Next requests go to Anthropic (now default)
+8. After 5 minutes, GGA retries OpenAI health check
+9. If healthy, OpenAI returns to rotation
+
+**Agent perspective**: Seamless. The agent never knew about the rate limit.
+
+## Cost Optimization Example
+
+Scenario: Simple file read query
+
+```yaml
+routing:
+  cost_routing:
+    enabled: true
+    max_tokens: 500
+    providers:
+      - google  # $0.10 per 1M tokens
+      - openai  # $10 per 1M tokens
+```
+
+**What happens**:
+
+1. Agent asks: "What's in README.md?"
+2. GGA estimates response will be less than 500 tokens
+3. Routes to Google Gemini (cheapest)
+4. Response: 300 tokens
+5. Cost: $0.00003 (vs. $0.003 with OpenAI)
+6. **100x cost savings**
+
+For long responses (over 500 tokens), GGA uses the default provider (OpenAI) for better quality.
+
+## Provider Translation
+
+GGA translates between OpenAI format and provider-specific formats:
+
+### Request Translation
+
+**OpenAI format** (agent sends):
+```json
+{
+  "model": "gpt-4",
+  "messages": [
+    {"role": "user", "content": "Hello"}
+  ]
+}
+```
+
+**Anthropic format** (GGA sends):
+```json
+{
+  "model": "claude-3-5-sonnet-latest",
+  "messages": [
+    {"role": "user", "content": "Hello"}
+  ],
+  "max_tokens": 4096
+}
+```
+
+### Response Translation
+
+**Anthropic response**:
+```json
+{
+  "id": "msg_123",
+  "type": "message",
+  "role": "assistant",
+  "content": [{"type": "text", "text": "Hi there!"}],
+  "usage": {"input_tokens": 10, "output_tokens": 5}
+}
+```
+
+**OpenAI format** (GGA returns):
+```json
+{
+  "id": "chatcmpl-123",
+  "object": "chat.completion",
+  "model": "gpt-4",
+  "choices": [
+    {
+      "message": {"role": "assistant", "content": "Hi there!"},
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15}
+}
+```
+
+## When to Use GGA
+
+### Good Use Cases
+
+- **High availability**: Can't afford downtime from provider outages
+- **Cost optimization**: Want to route simple queries to cheaper providers
+- **Multi-provider setup**: Already use multiple API keys
+- **Rate limit mitigation**: Hit provider limits during peak usage
+- **Testing**: Compare providers on the same workload
+
+### When NOT to Use GGA
+
+- **Single provider**: If you only use one provider, GGA adds complexity
+- **Provider-specific features**: GGA uses lowest common denominator (some features may not translate)
+- **Privacy concerns**: GGA logs requests (can be disabled)
+- **Latency sensitive**: GGA adds ~10-50ms overhead
+
+## FAQ
+
+<Accordion title="Does GGA add latency?">
+  Yes, but minimal. Expect 10-50ms overhead for the proxy translation. This is negligible compared to typical API response times (500-3000ms).
+</Accordion>
+
+<Accordion title="Can GGA handle streaming responses?">
+  Yes! GGA supports streaming (SSE) and translates streaming responses between provider formats.
+</Accordion>
+
+<Accordion title="What happens if all providers fail?">
+  GGA returns the error from the last provider in the fallback chain. Your agent sees a standard API error response.
+</Accordion>
+
+<Accordion title="Does GGA store my API keys securely?">
+  API keys are stored in `~/.config/gga/config.yaml` with 0600 permissions (read/write for owner only). GGA never sends keys to any server except the provider APIs.
+</Accordion>
+
+<Accordion title="Can I use GGA with agents that don't support custom endpoints?">
+  It depends. If the agent hardcodes API endpoints, you'll need to use environment variables or proxy settings to redirect traffic to GGA.
+</Accordion>
+
+<Accordion title="How does cost routing estimate token count?">
+  GGA uses a simple heuristic based on prompt length and historical averages. It's not perfect but catches ~80% of short responses.
+</Accordion>
+
+## Related Components
+
+- [Persona](/components/persona) - Works with any provider GGA routes to
+- [Permissions](/components/permissions) - Security guardrails independent of provider
+- [Context7](/components/context7) - MCP server works alongside GGA routing

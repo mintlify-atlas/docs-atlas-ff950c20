@@ -1,0 +1,588 @@
+---
+title: Building
+description: Build binaries, cross-compile for multiple platforms, and create releases
+---
+
+## Building from Source
+
+Gentle AI is written in Go 1.22+ and compiles to a single static binary.
+
+## Prerequisites
+
+<CardGroup cols={2}>
+  <Card title="Go 1.22+" icon="code">
+    Download from [golang.org](https://golang.org/dl/)
+  </Card>
+  <Card title="Git" icon="git">
+    For cloning the repository
+  </Card>
+  <Card title="Make (optional)" icon="terminal">
+    For convenient build commands
+  </Card>
+  <Card title="GoReleaser (optional)" icon="package">
+    For cross-platform releases
+  </Card>
+</CardGroup>
+
+## Quick Build
+
+```bash
+# Clone repository
+git clone https://github.com/Gentleman-Programming/gentle-ai.git
+cd gentle-ai
+
+# Install dependencies
+go mod download
+
+# Build for your platform
+go build -o gentle-ai ./cmd/gentle-ai
+
+# Run
+./gentle-ai --version
+```
+
+## Build Flags
+
+### Development Build
+
+```bash
+go build -o gentle-ai ./cmd/gentle-ai
+```
+
+- Includes debug symbols
+- Fast compile time
+- Larger binary size
+
+### Release Build
+
+```bash
+go build -ldflags="-s -w -X main.version=v1.0.0" \
+  -o gentle-ai ./cmd/gentle-ai
+```
+
+**Flags**:
+- `-s` - Strip debug symbols
+- `-w` - Strip DWARF debug info
+- `-X main.version=v1.0.0` - Set version at compile time
+
+**Result**: Smaller binary, faster startup, no debug info.
+
+## Cross-Compilation
+
+### Build for Specific Platform
+
+```bash
+# macOS Apple Silicon
+GOOS=darwin GOARCH=arm64 go build -o gentle-ai-darwin-arm64 ./cmd/gentle-ai
+
+# macOS Intel
+GOOS=darwin GOARCH=amd64 go build -o gentle-ai-darwin-amd64 ./cmd/gentle-ai
+
+# Linux AMD64
+GOOS=linux GOARCH=amd64 go build -o gentle-ai-linux-amd64 ./cmd/gentle-ai
+
+# Linux ARM64
+GOOS=linux GOARCH=arm64 go build -o gentle-ai-linux-arm64 ./cmd/gentle-ai
+
+# Windows AMD64
+GOOS=windows GOARCH=amd64 go build -o gentle-ai-windows-amd64.exe ./cmd/gentle-ai
+
+# Windows ARM64
+GOOS=windows GOARCH=arm64 go build -o gentle-ai-windows-arm64.exe ./cmd/gentle-ai
+```
+
+### All Platforms at Once
+
+```bash
+#!/bin/bash
+# build-all.sh
+
+VERSION=${1:-dev}
+OUTDIR=./dist
+
+mkdir -p $OUTDIR
+
+platforms=(
+  "darwin/amd64"
+  "darwin/arm64"
+  "linux/amd64"
+  "linux/arm64"
+  "windows/amd64"
+  "windows/arm64"
+)
+
+for platform in "${platforms[@]}"; do
+  IFS='/' read -r os arch <<< "$platform"
+  output="$OUTDIR/gentle-ai-${os}-${arch}"
+  
+  if [ "$os" = "windows" ]; then
+    output="${output}.exe"
+  fi
+  
+  echo "Building for $os/$arch..."
+  GOOS=$os GOARCH=$arch go build \
+    -ldflags="-s -w -X main.version=$VERSION" \
+    -o "$output" \
+    ./cmd/gentle-ai
+done
+
+echo "Binaries in $OUTDIR/"
+ls -lh $OUTDIR/
+```
+
+Usage:
+
+```bash
+chmod +x build-all.sh
+./build-all.sh v1.0.0
+```
+
+## GoReleaser (Recommended)
+
+GoReleaser builds, packages, and releases for all platforms automatically.
+
+### Install GoReleaser
+
+```bash
+# macOS
+brew install goreleaser
+
+# Linux
+go install github.com/goreleaser/goreleaser@latest
+```
+
+### GoReleaser Config
+
+Gentle AI includes `.goreleaser.yaml`:
+
+```yaml
+project_name: gentle-ai
+
+builds:
+  - main: ./cmd/gentle-ai
+    binary: gentle-ai
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: 'checksums.txt'
+
+release:
+  github:
+    owner: Gentleman-Programming
+    name: gentle-ai
+
+brews:
+  - repository:
+      owner: Gentleman-Programming
+      name: homebrew-tap
+    folder: Formula
+    homepage: https://github.com/Gentleman-Programming/gentle-ai
+    description: AI Gentle Stack - Ecosystem configurator for AI coding agents
+    license: MIT
+```
+
+### Build with GoReleaser
+
+```bash
+# Build snapshot (no release)
+goreleaser build --snapshot --clean
+
+# Build for current platform only
+goreleaser build --single-target --snapshot --clean
+
+# Test release process (dry run)
+goreleaser release --snapshot --skip=publish --clean
+```
+
+Built binaries in `dist/`.
+
+## Creating Releases
+
+### Manual Release
+
+1. **Tag a version**:
+
+```bash
+git tag -a v1.0.0 -m "Release v1.0.0"
+git push origin v1.0.0
+```
+
+2. **Build artifacts**:
+
+```bash
+goreleaser release --clean
+```
+
+3. **Verify release** on GitHub:
+   - Binaries uploaded
+   - Checksums generated
+   - Homebrew formula updated
+
+### GitHub Actions (Automated)
+
+Gentle AI uses GitHub Actions for releases:
+
+```yaml
+# .github/workflows/release.yml
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+```
+
+**Process**:
+1. Push a tag: `git push origin v1.0.0`
+2. GitHub Actions triggers
+3. GoReleaser builds for all platforms
+4. Binaries uploaded to GitHub Releases
+5. Homebrew formula auto-updated
+
+## Version Management
+
+### Set Version at Build Time
+
+```bash
+VERSION=$(git describe --tags --always --dirty)
+go build -ldflags="-X main.version=$VERSION" ./cmd/gentle-ai
+```
+
+### Version in Code
+
+```go
+// cmd/gentle-ai/main.go
+package main
+
+import (
+    "fmt"
+    "github.com/gentleman-programming/gentle-ai/internal/app"
+)
+
+// Set by GoReleaser via ldflags
+var version = "dev"
+
+func main() {
+    app.Version = version
+    // ...
+}
+```
+
+## Binary Size Optimization
+
+<CardGroup cols={2}>
+  <Card title="Strip Symbols" icon="compress">
+    ```bash
+    go build -ldflags="-s -w"
+    ```
+    
+    Reduces size by ~30%
+  </Card>
+  
+  <Card title="UPX Compression" icon="box">
+    ```bash
+    upx --best --lzma gentle-ai
+    ```
+    
+    Further reduces size (optional)
+  </Card>
+</CardGroup>
+
+**Warning**: UPX can trigger false positives in some antivirus software. Not recommended for Windows releases.
+
+## Build Targets
+
+### Supported Platforms
+
+| OS | Architecture | Binary Name | Package Format |
+|----|--------------|-------------|----------------|
+| macOS | arm64 (Apple Silicon) | `gentle-ai-darwin-arm64` | `.tar.gz` |
+| macOS | amd64 (Intel) | `gentle-ai-darwin-amd64` | `.tar.gz` |
+| Linux | amd64 | `gentle-ai-linux-amd64` | `.tar.gz` |
+| Linux | arm64 | `gentle-ai-linux-arm64` | `.tar.gz` |
+| Windows | amd64 | `gentle-ai-windows-amd64.exe` | `.zip` |
+| Windows | arm64 | `gentle-ai-windows-arm64.exe` | `.zip` |
+
+### Testing Builds
+
+```bash
+# Test macOS build
+GOOS=darwin GOARCH=arm64 go build ./cmd/gentle-ai
+file gentle-ai  # Check it's a macOS arm64 binary
+
+# Test Linux build
+GOOS=linux GOARCH=amd64 go build ./cmd/gentle-ai
+file gentle-ai  # Check it's a Linux amd64 binary
+
+# Test Windows build
+GOOS=windows GOARCH=amd64 go build ./cmd/gentle-ai
+file gentle-ai.exe  # Check it's a Windows PE executable
+```
+
+## Distribution
+
+### GitHub Releases
+
+Binaries are published to [GitHub Releases](https://github.com/Gentleman-Programming/gentle-ai/releases).
+
+Each release includes:
+- Binaries for all platforms (6 variants)
+- `checksums.txt` - SHA256 checksums
+- Release notes
+- Source code archives
+
+### Homebrew Tap
+
+```bash
+brew tap Gentleman-Programming/homebrew-tap
+brew install gentle-ai
+```
+
+Formula auto-updated by GoReleaser.
+
+### Go Install
+
+```bash
+go install github.com/gentleman-programming/gentle-ai/cmd/gentle-ai@latest
+```
+
+### Install Scripts
+
+**macOS/Linux**:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/scripts/install.sh | bash
+```
+
+**Windows**:
+
+```powershell
+irm https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/scripts/install.ps1 | iex
+```
+
+Scripts detect platform and download appropriate binary from GitHub Releases.
+
+## Development Workflow
+
+### Local Development
+
+```bash
+# Build
+go build -o gentle-ai ./cmd/gentle-ai
+
+# Run tests
+go test ./...
+
+# Run locally
+./gentle-ai install --dry-run --agent claude-code --preset minimal
+```
+
+### Pre-Release Testing
+
+```bash
+# Build all platforms
+goreleaser build --snapshot --clean
+
+# Test binaries
+./dist/gentle-ai-darwin-arm64_darwin_arm64_v8.0/gentle-ai --version
+./dist/gentle-ai-linux-amd64_linux_amd64_v1/gentle-ai --version
+
+# Run E2E tests
+RUN_FULL_E2E=1 ./e2e/docker-test.sh
+```
+
+### Release Checklist
+
+<CardGroup cols={2}>
+  <Card title="Pre-Release" icon="list-check">
+    - [ ] All tests pass (`go test ./...`)
+    - [ ] E2E tests pass (`./e2e/docker-test.sh`)
+    - [ ] Version bumped in code
+    - [ ] CHANGELOG updated
+    - [ ] README updated if needed
+  </Card>
+  
+  <Card title="Release" icon="rocket">
+    - [ ] Create git tag: `git tag v1.0.0`
+    - [ ] Push tag: `git push origin v1.0.0`
+    - [ ] Wait for GitHub Actions
+    - [ ] Verify GitHub Release
+    - [ ] Test Homebrew install
+    - [ ] Announce release
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+### Build Errors
+
+**Error: `go: module not found`**
+
+```bash
+go mod download
+go mod tidy
+```
+
+**Error: `undefined: embed.FS`**
+
+Update Go version (requires 1.16+):
+
+```bash
+go version  # Check current version
+# Update Go to 1.22+
+```
+
+**Error: Cross-compile fails**
+
+Some packages require CGO for cross-compilation. Gentle AI is CGO-free for portability.
+
+### GoReleaser Issues
+
+**Error: `git tag not found`**
+
+```bash
+git fetch --tags
+goreleaser release --snapshot  # Test without tags
+```
+
+**Error: `HOMEBREW_TAP_TOKEN not set`**
+
+Set GitHub token with repo write access:
+
+```bash
+export HOMEBREW_TAP_TOKEN=ghp_xxx
+```
+
+### Binary Size
+
+If binary is unexpectedly large:
+
+```bash
+# Check symbols
+go tool nm gentle-ai | wc -l
+
+# Strip if not already
+go build -ldflags="-s -w" ./cmd/gentle-ai
+
+# Check size
+ls -lh gentle-ai
+```
+
+## Advanced Builds
+
+### Static Binary (Linux)
+
+```bash
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+  go build -a -installsuffix cgo \
+  -ldflags="-s -w" \
+  -o gentle-ai-static ./cmd/gentle-ai
+```
+
+Useful for Docker containers (Alpine, scratch).
+
+### Debug Build
+
+```bash
+go build -gcflags="all=-N -l" -o gentle-ai-debug ./cmd/gentle-ai
+```
+
+Disables optimizations, enables debugging with `dlv`.
+
+### Profile-Guided Optimization (PGO)
+
+```bash
+# 1. Generate profile
+go build -o gentle-ai ./cmd/gentle-ai
+./gentle-ai install --dry-run  # Collect profile
+
+# 2. Build with profile
+go build -pgo=default.pgo -o gentle-ai ./cmd/gentle-ai
+```
+
+Can improve performance by 5-10%.
+
+## CI/CD Pipeline
+
+### GitHub Actions Workflows
+
+**`.github/workflows/release.yml`** - Release on tags
+
+- Triggered by: `git push origin vX.Y.Z`
+- Runs: GoReleaser
+- Outputs: GitHub Release with binaries
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Go Build Docs" href="https://pkg.go.dev/cmd/go#hdr-Compile_packages_and_dependencies" icon="book">
+    Official Go build documentation
+  </Card>
+  
+  <Card title="GoReleaser Docs" href="https://goreleaser.com/" icon="package">
+    GoReleaser configuration and usage
+  </Card>
+  
+  <Card title="GitHub Releases" href="https://github.com/Gentleman-Programming/gentle-ai/releases" icon="github">
+    View published releases
+  </Card>
+  
+  <Card title="Cross-Compilation" href="https://golang.org/doc/install/source#environment" icon="globe">
+    Go cross-compilation guide
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Testing" href="/development/testing" icon="vial">
+    Run tests before releasing
+  </Card>
+  <Card title="Contributing" href="https://github.com/Gentleman-Programming/gentle-ai/blob/main/CONTRIBUTING.md" icon="hand">
+    Submit your changes
+  </Card>
+</CardGroup>

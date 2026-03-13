@@ -1,0 +1,366 @@
+---
+title: Agents
+description: Understanding agent support tiers and configuration strategies
+---
+
+## Supported Agents
+
+Gentle AI configures 5 AI coding agents. All agents are **Tier Full** — they receive the complete ecosystem:
+
+<CardGroup cols={2}>
+  <Card title="Claude Code" icon="terminal">
+    **Full Support**
+    
+    - Skills: Yes
+    - MCP: Yes
+    - Sub-agents: Yes
+    - Output Styles: Yes (exclusive)
+    - Slash Commands: No
+  </Card>
+  
+  <Card title="OpenCode" icon="code">
+    **Full Support**
+    
+    - Skills: Yes
+    - MCP: Yes
+    - Sub-agents: Yes
+    - Output Styles: No
+    - Slash Commands: Yes (exclusive)
+  </Card>
+  
+  <Card title="Gemini CLI" icon="google">
+    **Full Support**
+    
+    - Skills: Yes
+    - MCP: Yes
+    - Sub-agents: Yes (experimental)
+    - Output Styles: No
+    - Slash Commands: No
+  </Card>
+  
+  <Card title="Cursor" icon="cursor">
+    **Full Support**
+    
+    - Skills: Yes
+    - MCP: Yes
+    - Sub-agents: Yes (async v2.5+)
+    - Output Styles: No
+    - Slash Commands: No
+  </Card>
+  
+  <Card title="VS Code Copilot" icon="microsoft">
+    **Full Support**
+    
+    - Skills: Yes
+    - MCP: Yes
+    - Sub-agents: Yes (parallel)
+    - Output Styles: No
+    - Slash Commands: No
+  </Card>
+</CardGroup>
+
+## Support Tier: Full
+
+All agents are `TierFull` and receive:
+
+1. **SDD Orchestrator**: Full agent-teams-lite orchestrator injected into system prompt
+2. **Skill Files**: All 11 skills written to agent's skills directory
+3. **MCP Configuration**: Context7 and other MCP servers configured
+4. **Sub-Agent Delegation**: Native support for parallel sub-agent workflows
+5. **System Prompt Injection**: Persona, permissions, and workflow instructions
+
+<Info>
+Every agent supports sub-agent delegation natively, enabling the full SDD orchestration workflow with parallel execution.
+</Info>
+
+## Configuration Strategies
+
+Each agent has unique conventions for system prompts and MCP configuration:
+
+### System Prompt Strategies
+
+<Tabs>
+  <Tab title="Marker-Based">
+    **Non-destructive injection using HTML comments**
+    
+    Used by: **Claude Code**, **Gemini CLI**, **Cursor**
+    
+    Example:
+    ```markdown
+    # My Custom Instructions
+    
+    <!-- gentle-ai:sdd-orchestrator -->
+    [Injected SDD orchestrator content]
+    <!-- /gentle-ai:sdd-orchestrator -->
+    
+    <!-- gentle-ai:persona -->
+    [Injected persona instructions]
+    <!-- /gentle-ai:persona -->
+    
+    # More Custom Stuff
+    ```
+    
+    Benefits:
+    - Preserves user customizations
+    - Multiple updates without clobbering
+    - Clear section boundaries
+  </Tab>
+  
+  <Tab title="File Replace">
+    **Complete file replacement**
+    
+    Used by: **OpenCode**
+    
+    OpenCode expects a single unified `AGENTS.md` file. Gentle AI generates the complete file including:
+    - SDD orchestrator
+    - Persona instructions
+    - Permissions guardrails
+    - All ecosystem components
+    
+    Benefits:
+    - Single source of truth
+    - No merge conflicts
+    - Clean structure
+  </Tab>
+  
+  <Tab title="Separate File">
+    **Dedicated instructions file**
+    
+    Used by: **VS Code Copilot**
+    
+    VS Code Copilot loads instructions from:
+    ```
+    Code/User/prompts/gentle-ai.instructions.md
+    ```
+    
+    Benefits:
+    - Doesn't interfere with user's main config
+    - Easy to disable (rename/delete file)
+    - Modular organization
+  </Tab>
+</Tabs>
+
+### MCP Configuration Strategies
+
+<Tabs>
+  <Tab title="Separate Files">
+    **One JSON file per MCP server**
+    
+    Used by: **Claude Code**
+    
+    Directory structure:
+    ```
+    ~/.claude/mcp/
+      context7.json
+      filesystem.json
+      github.json
+    ```
+    
+    Each file contains a single server config:
+    ```json
+    {
+      "command": "npx",
+      "args": ["-y", "@context7/mcp"],
+      "env": {}
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Merged Settings">
+    **MCP servers merged into settings.json**
+    
+    Used by: **OpenCode**, **Gemini CLI**
+    
+    Settings file structure:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@context7/mcp"]
+        },
+        "other-server": {
+          "command": "..."
+        }
+      },
+      "otherSettings": "..."
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Dedicated MCP File">
+    **Single mcp.json config file**
+    
+    Used by: **Cursor**, **VS Code Copilot**
+    
+    File: `~/.cursor/mcp.json` or `Code/User/mcp.json`
+    
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@context7/mcp"]
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Agent-Specific Details
+
+### Claude Code
+
+**Config Path**: `~/.claude`
+
+<Accordion title="Configuration Details">
+- **System Prompt**: `~/.claude/CLAUDE.md` (marker-based injection)
+- **Skills Directory**: `~/.claude/skills/`
+- **MCP Strategy**: Separate files in `~/.claude/mcp/`
+- **Output Styles**: `~/.claude/output-styles/` (exclusive feature)
+- **Sub-Agents**: Native support with custom agent definitions
+
+**Unique Features**:
+- Output styles for formatted responses
+- Marker-based system prompt injection preserves user content
+</Accordion>
+
+### OpenCode
+
+**Config Path**: `~/.config/opencode`
+
+<Accordion title="Configuration Details">
+- **System Prompt**: `~/.config/opencode/AGENTS.md` (full replace)
+- **Skills Directory**: `~/.config/opencode/skills/`
+- **MCP Strategy**: Merged into `~/.config/opencode/settings.json`
+- **Slash Commands**: Custom commands like `/sdd-init`, `/sdd-new` (exclusive feature)
+- **Sub-Agents**: Native support via Task tool
+
+**Unique Features**:
+- Slash commands for SDD workflow meta-commands
+- Full file replacement strategy for clean configuration
+</Accordion>
+
+### Gemini CLI
+
+**Config Path**: `~/.gemini`
+
+<Accordion title="Configuration Details">
+- **System Prompt**: `~/.gemini/GEMINI.md` (marker-based injection)
+- **Skills Directory**: `~/.gemini/skills/`
+- **MCP Strategy**: Merged into `~/.gemini/settings.json`
+- **Sub-Agents**: Experimental support (requires `experimental.enableAgents: true`)
+- **Custom Agents**: Defined as markdown files in `~/.gemini/agents/`
+
+**Experimental Features**:
+- Sub-agents require opt-in via settings
+- Custom agent definitions for specialized tasks
+</Accordion>
+
+### Cursor
+
+**Config Path**: `~/.cursor`
+
+<Accordion title="Configuration Details">
+- **System Prompt**: `~/.cursor/CURSOR.md` (marker-based injection)
+- **Skills Directory**: `~/.cursor/skills/`
+- **MCP Strategy**: Single file at `~/.cursor/mcp.json`
+- **Sub-Agents**: Async support (v2.5+) with nested sub-agent trees
+- **Rules File**: Also supports `.cursorrules` in project directories
+
+**Unique Features**:
+- Async sub-agents can run in background
+- Nested sub-agent trees for complex orchestration
+</Accordion>
+
+### VS Code Copilot
+
+**Config Path**: `~/.copilot` + `Code/User/`
+
+<Accordion title="Configuration Details">
+- **System Prompt**: `Code/User/prompts/gentle-ai.instructions.md` (separate file)
+- **Skills Directory**: `~/.copilot/skills/` (global only)
+- **MCP Strategy**: Merged into `Code/User/mcp.json`
+- **Sub-Agents**: `runSubagent` tool with parallel execution support
+- **Settings**: Standard VS Code User settings directory
+
+**Unique Features**:
+- Parallel sub-agent execution
+- Separate prompt file doesn't interfere with user config
+- Global skills directory (not per-workspace)
+</Accordion>
+
+## Sub-Agent Support
+
+All agents support sub-agent delegation for SDD workflow orchestration:
+
+| Agent | Sub-Agent Type | Parallel Execution | Custom Definitions |
+|-------|----------------|--------------------|-----------------|
+| Claude Code | Native | Yes | Yes (agent files) |
+| OpenCode | Task tool | Yes | Yes (skill-based) |
+| Gemini CLI | Experimental | Yes | Yes (markdown) |
+| Cursor | Async (v2.5+) | Yes (background) | Yes (rules) |
+| VS Code Copilot | runSubagent | Yes | Yes (prompts) |
+
+<Info>
+Sub-agent delegation is **critical** for the SDD workflow — each phase (explore, propose, spec, design, etc.) runs as a dedicated sub-agent with isolated context.
+</Info>
+
+## Configuration Paths by Platform
+
+### macOS / Linux
+
+```
+~/.claude/                    Claude Code
+~/.config/opencode/           OpenCode
+~/.gemini/                    Gemini CLI
+~/.cursor/                    Cursor
+~/.copilot/                   VS Code Copilot (skills)
+~/Library/Application Support/Code/User/   VS Code Copilot (settings, macOS)
+~/.config/Code/User/          VS Code Copilot (settings, Linux)
+```
+
+### Windows
+
+```
+%USERPROFILE%\.claude\                      Claude Code
+%USERPROFILE%\.config\opencode\             OpenCode
+%USERPROFILE%\.gemini\                      Gemini CLI
+%USERPROFILE%\.cursor\                      Cursor
+%USERPROFILE%\.copilot\                     VS Code Copilot (skills)
+%APPDATA%\Code\User\                        VS Code Copilot (settings)
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Components"
+    icon="puzzle-piece"
+    href="/concepts/components"
+  >
+    Deep dive into ecosystem components
+  </Card>
+  <Card
+    title="Skills Guide"
+    icon="book"
+    href="/guides/skills"
+  >
+    Learn about SDD and foundation skills
+  </Card>
+  <Card
+    title="Platform Support"
+    icon="laptop"
+    href="/platforms/overview"
+  >
+    Platform-specific configuration details
+  </Card>
+  <Card
+    title="Interactive Mode"
+    icon="terminal"
+    href="/guides/interactive-mode"
+  >
+    Master the TUI workflow
+  </Card>
+</CardGroup>

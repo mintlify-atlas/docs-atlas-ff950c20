@@ -1,0 +1,523 @@
+---
+title: Interactive Mode
+description: Master the Bubbletea TUI for guided configuration
+---
+
+## Overview
+
+The interactive TUI (Terminal User Interface) provides a guided, visual workflow for configuring Gentle AI. Built with [Bubbletea](https://github.com/charmbracelet/bubbletea) and styled with the Rose Pine theme.
+
+## Launching the TUI
+
+Simply run the command without arguments:
+
+```bash
+gentle-ai
+```
+
+The TUI will:
+1. Auto-detect your system environment
+2. Scan for installed AI agents
+3. Check for available updates
+4. Guide you through configuration
+
+<Info>
+The TUI runs entirely in your terminal — no browser or GUI required. Works over SSH and in tmux/screen.
+</Info>
+
+## Screen Flow
+
+The TUI consists of 10 screens that guide you through the configuration process:
+
+### 1. Welcome Screen
+
+<Steps>
+  <Step title="First Launch">
+    The welcome screen shows:
+    - Gentle AI version
+    - Available updates (if any)
+    - Main menu options:
+      - **Configure Ecosystem** → Start configuration flow
+      - **Restore Backup** → Restore a previous configuration
+      - **Quit** → Exit the TUI
+  </Step>
+  
+  <Step title="Navigation">
+    Use keyboard controls:
+    - `↑`/`k` or `↓`/`j` — Move cursor up/down
+    - `Enter` — Select option
+    - `q` or `Ctrl+C` — Quit
+  </Step>
+</Steps>
+
+<Tip>
+Update notifications appear as a banner at the top when new versions of Gentle AI or ecosystem components are available.
+</Tip>
+
+### 2. Detection Screen
+
+Automatic system detection results:
+
+<CodeGroup>
+
+```text System Information
+Operating System: darwin (arm64)
+Shell: /bin/zsh
+Package Manager: brew
+Supported: Yes
+```
+
+```text Installed Tools
+✓ git (2.39.0)
+✓ curl (8.1.0)
+✓ node (20.11.0)
+✓ npm (10.2.4)
+✗ brew (not found)
+```
+
+```text Detected Agents
+✓ Claude Code (~/.claude)
+✓ OpenCode (~/.config/opencode)
+✗ Gemini CLI (not found)
+✗ Cursor (not found)
+✗ VS Code Copilot (not found)
+```
+
+</CodeGroup>
+
+<Warning>
+If required dependencies are missing, the TUI will show installation hints for your platform:
+- macOS: `brew install <package>`
+- Ubuntu/Debian: `sudo apt install <package>`
+- Arch: `sudo pacman -S <package>`
+- Windows: `winget install <package>`
+</Warning>
+
+Options:
+- **Continue** → Proceed to agent selection
+- **Back** → Return to welcome
+
+### 3. Agent Selection
+
+Choose which AI agents to configure:
+
+```text
+  [ ] Claude Code
+  [✓] OpenCode
+  [ ] Gemini CLI
+  [ ] Cursor
+  [ ] VS Code Copilot
+
+  > Continue
+    Back
+```
+
+<Steps>
+  <Step title="Toggle Selection">
+    - `Space` — Toggle agent on/off
+    - Pre-detected agents are selected by default
+  </Step>
+  
+  <Step title="Multi-Select">
+    You can configure multiple agents at once.
+    
+    Each agent receives:
+    - Independent configuration
+    - Same ecosystem components
+    - Agent-specific paths and strategies
+  </Step>
+  
+  <Step title="Continue">
+    Move cursor to **Continue** and press `Enter`.
+    
+    Requires at least one agent selected.
+  </Step>
+</Steps>
+
+### 4. Persona Selection
+
+Choose your agent's behavior mode:
+
+```text
+  > Gentleman    Teaching-oriented mentor
+    Neutral      Clean, professional tone
+    Custom       Bring your own persona
+```
+
+<Tabs>
+  <Tab title="Gentleman">
+    **Recommended for learning**
+    
+    - Pushes back on bad practices
+    - Explains the "why" behind decisions
+    - Uses direct, confrontational language
+    - Focuses on concepts over code
+    - Adapts language to input (Spanish/English)
+  </Tab>
+  
+  <Tab title="Neutral">
+    **Recommended for experienced developers**
+    
+    - No personality or opinions
+    - Factual and objective communication
+    - Standard technical language
+    - Executes requests without pushback
+  </Tab>
+  
+  <Tab title="Custom">
+    **Advanced users only**
+    
+    - Provide your own persona instructions
+    - Full control over behavior
+    - Requires manual configuration after install
+  </Tab>
+</Tabs>
+
+### 5. Preset Selection
+
+Choose what to install:
+
+```text
+  > Full Gentleman     All components + all skills
+    Ecosystem Only     Core components + P0 skills
+    Minimal            Engram + Persona + Permissions
+    Custom             Pick components individually
+```
+
+| Preset | Components | Skills | Use Case |
+|--------|-----------|--------|----------|
+| Full Gentleman | All 8 | All 11 | Recommended for most users |
+| Ecosystem Only | 5 core | 9 SDD + 2 foundation | SDD workflow focused |
+| Minimal | 3 essential | None | Lightweight setup |
+| Custom | You pick | You pick | Advanced customization |
+
+<Info>
+The preset determines the initial component selection. You can review and adjust before installing.
+</Info>
+
+### 6. Dependency Tree
+
+View the resolved dependency graph:
+
+```text
+Dependency Tree
+
+Selected Components:
+  ✓ engram          (Persistent cross-session memory)
+  ✓ sdd             (Spec-Driven Development workflow)
+  ✓ skills          (Curated coding skill library)
+  ✓ context7        (MCP server for live documentation)
+  ✓ persona         (Behavior and teaching mode)
+  ✓ permissions     (Security-first guardrails)
+  ✓ gga             (AI provider switcher)
+
+Dependencies:
+  sdd → engram
+  skills → sdd
+
+Install Order:
+  1. engram
+  2. sdd
+  3. skills
+  4. context7
+  5. persona
+  6. permissions
+  7. gga
+
+Options:
+  > Continue
+    Back
+```
+
+<Accordion title="Custom Preset: Toggle Components">
+If you selected the **Custom** preset, you can toggle individual components:
+
+```text
+  [✓] engram
+  [✓] sdd
+  [✓] skills
+  [ ] context7
+  [✓] persona
+  [ ] permissions
+  [ ] gga
+  [ ] theme
+
+  > Continue
+    Back
+```
+
+Use `Space` to toggle components on/off. The planner automatically resolves dependencies.
+</Accordion>
+
+### 7. Review Screen
+
+Final confirmation before installation:
+
+```text
+Installation Review
+
+Agents to Configure:
+  • Claude Code (~/.claude)
+  • OpenCode (~/.config/opencode)
+
+Components to Install:
+  • engram — Persistent cross-session memory
+  • sdd — Spec-Driven Development workflow
+  • skills — Curated coding skill library (11 skills)
+  • context7 — MCP server for live documentation
+  • persona — Gentleman teaching mode
+  • permissions — Security-first guardrails
+  • gga — AI provider switcher
+
+Missing Dependencies:
+  (none)
+
+Actions:
+  1. Create backup snapshot
+  2. Install npm packages: @context7/mcp
+  3. Install GGA binary
+  4. Configure 2 agents
+  5. Inject 7 components
+  6. Verify installation
+
+Options:
+  > Confirm and Install
+    Back to Dependencies
+```
+
+<Warning>
+This is your last chance to review before applying changes. Gentle AI will create a backup before proceeding.
+</Warning>
+
+### 8. Installing Screen
+
+Real-time progress display:
+
+```text
+Installing...
+
+  ✓ prepare:check-dependencies
+  ✓ prepare:backup-snapshot
+  ⏳ agent:claude-code
+  ○ agent:opencode
+  ○ component:engram
+  ○ component:sdd
+  ○ component:skills
+  ○ component:context7
+  ○ component:persona
+  ○ component:permissions
+  ○ component:gga
+
+Log:
+  [12:34:56] starting installation
+  [12:34:57] done: prepare:check-dependencies
+  [12:34:58] done: prepare:backup-snapshot
+  [12:34:59] running: agent:claude-code
+```
+
+**Status Indicators**:
+- `⏳` — Currently running
+- `✓` — Completed successfully
+- `✗` — Failed
+- `○` — Pending
+
+<Info>
+You cannot go back while installation is running. Press `Esc` only after completion.
+</Info>
+
+### 9. Complete Screen
+
+Installation summary:
+
+```text
+Installation Complete!
+
+✓ 2 agents configured
+✓ 7 components installed
+✓ Backup created at: ~/.gentle-ai/backups/20260313_123456
+
+Next Steps:
+
+1. Verify installation:
+   cat ~/.claude/CLAUDE.md | grep "gentle-ai"
+   ls ~/.claude/skills/
+
+2. Enable GGA per project (optional):
+   cd your-project
+   gga init
+   gga install
+
+3. Start using your enhanced agent!
+
+Press Enter to exit.
+```
+
+<Accordion title="Installation Failures">
+If any steps failed, the summary shows:
+
+```text
+Installation Completed with Errors
+
+Failed Steps:
+  ✗ component:context7 — npm install failed: EACCES permission denied
+
+Suggestions:
+  - Fix npm permissions or use a node version manager (nvm/fnm)
+  - Run: mkdir ~/.npm-global && npm config set prefix '~/.npm-global'
+  - Re-run: gentle-ai install --component context7
+
+Backup Available:
+  Restore with: gentle-ai (select "Restore Backup")
+
+Press Enter to exit.
+```
+</Accordion>
+
+### 10. Backups Screen
+
+View and restore previous configurations:
+
+```text
+Available Backups
+
+  > 2026-03-13 12:34:56  (2 agents, 7 components)
+    2026-03-12 09:15:23  (1 agent, 5 components)
+    2026-03-10 14:42:01  (3 agents, 8 components)
+
+    Back to Welcome
+```
+
+<Steps>
+  <Step title="Select Backup">
+    Move cursor to a backup entry and press `Enter`.
+  </Step>
+  
+  <Step title="Restore">
+    Gentle AI will:
+    - Restore all agent configurations from snapshot
+    - Revert component injections
+    - Restore file contents
+  </Step>
+  
+  <Step title="Verification">
+    After restore, verify your agent configs are back to the snapshot state.
+  </Step>
+</Steps>
+
+<Warning>
+Restoring a backup **overwrites** current configurations. Make sure you want to revert before confirming.
+</Warning>
+
+## Keyboard Controls
+
+| Key | Action |
+|-----|--------|
+| `↑` / `k` | Move cursor up |
+| `↓` / `j` | Move cursor down |
+| `Space` | Toggle selection (agent/component screens) |
+| `Enter` | Confirm selection / Proceed |
+| `Esc` | Go back to previous screen |
+| `q` | Quit (except during installation) |
+| `Ctrl+C` | Force quit (emergency exit) |
+
+<Tip>
+Vim-style navigation (`j`/`k`) works in addition to arrow keys.
+</Tip>
+
+## TUI Features
+
+### Auto-Detection
+
+The TUI automatically detects:
+- Installed agents (checks for config directories)
+- System architecture and OS
+- Available package managers
+- Installed dependencies (git, curl, node, npm)
+- npm global prefix writability
+
+### Smart Defaults
+
+- Pre-selects detected agents
+- Recommends "Full Gentleman" preset
+- Resolves dependencies automatically
+- Shows platform-specific install hints
+
+### Progress Tracking
+
+- Real-time step status updates
+- Streaming logs during installation
+- Error messages with context
+- Rollback on failure
+
+### Backup Management
+
+- Automatic backups before every change
+- Timestamped snapshots
+- One-command restore
+- Preserves agent configs and injected content
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="TUI doesn't render correctly">
+    **Issue**: Broken layout, missing colors, or garbled text.
+    
+    **Solutions**:
+    - Make sure your terminal supports 256 colors
+    - Try a modern terminal emulator (iTerm2, Alacritty, Windows Terminal)
+    - Check `$TERM` environment variable: should be `xterm-256color` or similar
+    - Resize terminal window (minimum 80x24 recommended)
+  </Accordion>
+  
+  <Accordion title="Installation hangs or freezes">
+    **Issue**: TUI stops responding during installation.
+    
+    **Solutions**:
+    - Wait up to 2 minutes for npm installs to complete
+    - Press `Ctrl+C` to force quit
+    - Check logs at `~/.gentle-ai/logs/`
+    - Run with CLI mode for verbose output: `gentle-ai install ...`
+  </Accordion>
+  
+  <Accordion title="Cannot navigate with arrow keys">
+    **Issue**: Arrow keys don't move cursor.
+    
+    **Solutions**:
+    - Use vim keys instead: `j` (down) / `k` (up)
+    - Check if your terminal is in application mode
+    - Try running in a different terminal emulator
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="CLI Mode"
+    icon="code"
+    href="/guides/cli-mode"
+  >
+    Learn the command-line alternative
+  </Card>
+  <Card
+    title="Backup & Restore"
+    icon="clock-rotate-left"
+    href="/guides/backup-restore"
+  >
+    Manage configuration snapshots
+  </Card>
+  <Card
+    title="Presets"
+    icon="sliders"
+    href="/guides/presets"
+  >
+    Understand preset configurations
+  </Card>
+  <Card
+    title="Skills"
+    icon="book"
+    href="/guides/skills"
+  >
+    Deep dive into SDD skills
+  </Card>
+</CardGroup>

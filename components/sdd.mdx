@@ -1,0 +1,359 @@
+---
+title: SDD (Spec-Driven Development)
+description: Structured workflow for planning and implementing features with AI
+---
+
+# SDD (Spec-Driven Development)
+
+Spec-Driven Development (SDD) is a workflow component that guides AI agents through a structured process for planning, designing, and implementing code changes. It enforces a "think before you code" approach with explicit phases.
+
+## What is SDD?
+
+SDD breaks feature development into explicit phases:
+
+1. **Explore** - Understand the problem space and existing code
+2. **Propose** - Define intent, scope, and approach
+3. **Spec** - Write concrete behavioral specifications
+4. **Design** - Make architectural decisions
+5. **Tasks** - Break work into implementable chunks
+6. **Apply** - Write the actual code
+7. **Verify** - Confirm implementation matches specs
+8. **Archive** - Merge changes and clean up
+
+Each phase produces an **artifact** that feeds into the next phase, creating a paper trail of decisions.
+
+## How It Works
+
+### Orchestrator Pattern
+
+SDD uses a **delegate-only orchestrator** that:
+- Launches specialized sub-agents for each phase
+- Passes relevant artifacts from previous phases
+- Does NOT write code itself—only coordinates
+- Persists DAG state for compaction recovery
+
+Source: `internal/components/sdd/inject.go:301`
+
+### Persistence Modes
+
+SDD supports multiple persistence backends:
+
+| Mode | Reads From | Writes To | Project Files |
+|------|-----------|-----------|---------------|
+| `engram` | Engram MCP server | Engram | Never |
+| `openspec` | Filesystem (`openspec/` directory) | Filesystem | Yes |
+| `hybrid` | Engram (primary) + Filesystem (fallback) | Both | Yes |
+| `none` | Orchestrator context only | Nowhere | Never |
+
+**Default behavior**: If Engram is available, use `engram`. Otherwise, use `none`.
+
+Source: `internal/assets/skills/_shared/persistence-contract.md:5-13`
+
+## Configuration Files Written
+
+### System Prompt Injection
+
+SDD injects orchestrator instructions into the agent's system prompt:
+
+<CardGroup cols={2}>
+  <Card title="Claude Code" icon="wave">
+    Injects as markdown section into `~/.config/claude-code/.system-prompt.md` using section markers.
+  </Card>
+  <Card title="OpenCode" icon="code">
+    Writes `sdd-orchestrator` agent definition to `~/.config/opencode/opencode.json` and injects into `AGENTS.md`.
+  </Card>
+  <Card title="Generic Agents" icon="file">
+    Appends SDD orchestrator content to system prompt file if not already present.
+  </Card>
+</CardGroup>
+
+### Slash Commands (OpenCode)
+
+For OpenCode, SDD installs slash commands from `internal/assets/opencode/commands/`:
+
+- `/sdd-init.md` - Initialize SDD in a project
+- `/sdd-explore.md` - Explore a topic
+- `/sdd-propose.md` - Create a proposal
+- `/sdd-spec.md` - Write specifications
+- `/sdd-design.md` - Design the solution
+- `/sdd-tasks.md` - Break into tasks
+- `/sdd-apply.md` - Implement tasks
+- `/sdd-verify.md` - Verify implementation
+- `/sdd-archive.md` - Archive the change
+
+Commands are written to `~/.config/opencode/commands/` with frontmatter that references `agent: sdd-orchestrator`.
+
+Source: `internal/components/sdd/inject.go:59-83`
+
+### Skill Files
+
+SDD installs skill files if the agent supports skills:
+
+**SDD Skills** (written to agent's skills directory):
+- `sdd-init/SKILL.md`
+- `sdd-explore/SKILL.md`
+- `sdd-propose/SKILL.md`
+- `sdd-spec/SKILL.md`
+- `sdd-design/SKILL.md`
+- `sdd-tasks/SKILL.md`
+- `sdd-apply/SKILL.md`
+- `sdd-verify/SKILL.md`
+- `sdd-archive/SKILL.md`
+
+**Shared Conventions** (written to `_shared/` subdirectory):
+- `persistence-contract.md` - Persistence mode rules
+- `engram-convention.md` - Engram naming patterns
+- `openspec-convention.md` - Filesystem structure rules
+
+Source: `internal/components/sdd/inject.go:103-153`
+
+## OpenSpec Directory Structure
+
+When using `openspec` or `hybrid` mode, SDD creates this structure:
+
+```
+openspec/
+├── config.yaml              # Project-specific SDD config
+├── specs/                   # Source of truth (main specs)
+│   └── {domain}/
+│       └── spec.md
+└── changes/                 # Active changes
+    ├── archive/             # Completed changes (YYYY-MM-DD-{change-name}/)
+    └── {change-name}/       # Active change folder
+        ├── state.yaml       # DAG state (orchestrator)
+        ├── exploration.md   # (optional) from sdd-explore
+        ├── proposal.md      # from sdd-propose
+        ├── specs/           # from sdd-spec
+        │   └── {domain}/
+        │       └── spec.md  # Delta spec
+        ├── design.md        # from sdd-design
+        ├── tasks.md         # from sdd-tasks (updated by sdd-apply)
+        └── verify-report.md # from sdd-verify
+```
+
+Source: `internal/assets/skills/_shared/openspec-convention.md:5-23`
+
+## Configuration Example
+
+`openspec/config.yaml` stores project context and phase-specific rules:
+
+```yaml
+schema: spec-driven
+
+context: |
+  Tech stack: Go 1.21, React 19, PostgreSQL
+  Architecture: Microservices with REST APIs
+  Testing: Go testing + Vitest
+  Style: Standard Go formatting, ESLint for React
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Identify affected modules/packages
+  specs:
+    - Use Given/When/Then format for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group tasks by phase (infrastructure, implementation, testing)
+    - Use hierarchical numbering (1.1, 1.2, etc.)
+    - Keep tasks small enough to complete in one session
+  apply:
+    - Follow existing code patterns and conventions
+    - Load relevant coding skills for the project stack
+    tdd: false           # Set to true to enable RED-GREEN-REFACTOR
+    test_command: ""     # e.g., "npm test", "pytest"
+  verify:
+    - Run tests if test infrastructure exists
+    - Compare implementation against every spec scenario
+    test_command: ""     # Override for verification
+    build_command: ""    # Override for build check
+  archive:
+    - Warn before merging destructive deltas (large removals)
+```
+
+Source: `internal/assets/skills/sdd-init/SKILL.md:65-97`
+
+## Phase Examples
+
+### 1. Propose Phase
+
+Creates `proposal.md` with structured sections:
+
+```markdown
+# Proposal: Add Dark Mode
+
+## Intent
+Users have requested a dark mode option to reduce eye strain during evening coding sessions.
+
+## Scope
+### In Scope
+- Dark theme CSS variables
+- Theme toggle in settings
+- Persist user preference
+
+### Out of Scope
+- Automatic theme switching based on time
+- Custom theme colors (future enhancement)
+
+## Approach
+Use CSS custom properties with a theme class on body element...
+
+## Affected Areas
+| Area | Impact | Description |
+|------|--------|-------------|
+| `styles/theme.css` | New | Theme variables |
+| `components/Settings.tsx` | Modified | Add theme toggle |
+
+## Risks
+| Risk | Likelihood | Mitigation |
+|------|------------|------------|
+| Contrast issues | Medium | WCAG AA testing |
+
+## Rollback Plan
+Remove theme class from body, revert CSS changes, clear localStorage.
+```
+
+Source: `internal/assets/skills/sdd-propose/SKILL.md:86-134`
+
+### 2. Apply Phase (TDD Mode)
+
+When TDD is enabled, `sdd-apply` follows RED → GREEN → REFACTOR:
+
+```markdown
+## Phase 1: Foundation
+
+- [x] 1.1 Create `internal/auth/middleware.go` with JWT validation
+  - RED: Wrote test expecting 401 for missing token
+  - GREEN: Implemented token check
+  - REFACTOR: Extracted validation logic
+
+- [x] 1.2 Add `AuthConfig` struct to `internal/config/config.go`
+  - RED: Test failed to parse config
+  - GREEN: Added struct with validation
+  - REFACTOR: Consistent naming
+
+- [ ] 1.3 Add auth routes to `internal/server/server.go`
+```
+
+Source: `internal/assets/skills/sdd-apply/SKILL.md:96-125`
+
+## Sub-Agent Context Rules
+
+Each phase launches with a **fresh context** and no access to orchestrator memory. The orchestrator must:
+
+1. **Pass artifact references**: Not inline content (too large)
+2. **Include persistence instructions**: Mandatory `mem_save` calls
+3. **Specify mode**: `engram | openspec | hybrid | none`
+4. **Load skill registry first**: Every sub-agent checks `.atl/skill-registry.md` or Engram
+
+Source: `internal/assets/skills/_shared/persistence-contract.md:56-79`
+
+## Persistence Contract
+
+### Engram Mode
+
+Artifacts are stored with structured topic keys:
+
+```typescript
+// Save proposal
+mem_save(
+  title: "sdd/add-dark-mode/proposal",
+  topic_key: "sdd/add-dark-mode/proposal",
+  type: "architecture",
+  project: "myapp",
+  content: "# Proposal: Add Dark Mode\n\n..."
+)
+
+// Read dependencies (two-step pattern)
+mem_search(query: "sdd/add-dark-mode/proposal", project: "myapp") // → get ID
+mem_get_observation(id: "obs_123") // → full content
+```
+
+Source: `internal/assets/skills/_shared/persistence-contract.md:41-45`
+
+### OpenSpec Mode
+
+Artifacts are written to filesystem:
+
+```bash
+openspec/changes/add-dark-mode/
+├── proposal.md
+├── specs/ui/theme-switching.md
+├── design.md
+├── tasks.md
+└── verify-report.md
+```
+
+### Hybrid Mode
+
+Persists to BOTH Engram and filesystem:
+- **Read priority**: Engram first (faster, survives compaction)
+- **Write behavior**: Both writes MUST succeed
+- **Token cost**: Higher than single backend (double persistence)
+
+Source: `internal/assets/skills/_shared/persistence-contract.md:25-34`
+
+## Post-Installation Verification
+
+SDD performs critical post-checks to catch silent failures:
+
+```go
+// Verify OpenCode agent definition exists
+if !strings.Contains(settingsData, `"sdd-orchestrator"`) {
+    return error("OpenCode /sdd-* commands will fail")
+}
+
+// Verify skill files were written and have content
+for _, skill := range []string{"sdd-init", "sdd-apply", "sdd-verify"} {
+    if fileSize < 100 {
+        return error("Skill file corrupt or empty")
+    }
+}
+```
+
+Source: `internal/components/sdd/inject.go:157-184`
+
+## Legacy Migration
+
+SDD automatically migrates old OpenCode schema:
+
+```go
+// Normalize old "agents" key to current "agent" key
+if root["agents"] exists {
+    merge into root["agent"]
+    delete root["agents"]
+}
+```
+
+Source: `internal/components/sdd/inject.go:214-261`
+
+## FAQ
+
+<Accordion title="What happens if I don't install SDD?">
+  Your AI agent works normally but without structured workflow guidance. You can still implement features, but you lose the explicit planning phases and artifact persistence.
+</Accordion>
+
+<Accordion title="Can I skip phases in the SDD workflow?">
+  Yes. The orchestrator can jump directly to any phase (e.g., `/sdd-apply` without specs). However, skipping phases reduces quality—you lose the "thinking" that specs and design provide.
+</Accordion>
+
+<Accordion title="What if I don't have Engram installed?">
+  SDD falls back to `none` mode. Artifacts live only in the conversation context. You'll lose work when the context compacts or the conversation ends. Install Engram or use `openspec` mode for persistence.
+</Accordion>
+
+<Accordion title="How do I enable TDD mode?">
+  Set `rules.apply.tdd: true` in `openspec/config.yaml`. The `sdd-apply` skill will automatically follow RED → GREEN → REFACTOR for every task.
+</Accordion>
+
+<Accordion title="Can I customize the SDD workflow?">
+  Yes. Edit the skill files in your agent's skills directory, or add custom `rules` in `openspec/config.yaml` to enforce project-specific constraints per phase.
+</Accordion>
+
+## Related Components
+
+- [Engram](/components/engram) - Default persistence backend for SDD
+- [Skills](/components/skills) - SDD installs 9 skill files + 3 shared conventions
+- [Persona](/components/persona) - Gentleman persona includes SDD orchestrator

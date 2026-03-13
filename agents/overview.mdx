@@ -1,0 +1,110 @@
+---
+title: "Agents Overview"
+description: "Supported AI coding agents and their capabilities in the Gentle AI ecosystem"
+---
+
+Gentle AI is an ecosystem configurator that supercharges AI coding agents with memory, skills, MCP servers, and workflow orchestration. This is **not** an agent installer—it configures the agents you already use.
+
+## Supported Agents
+
+All supported agents receive **full SDD orchestration**, skill files, MCP server integration, and system prompt injection. Every agent supports sub-agent delegation natively.
+
+<CardGroup cols={2}>
+  <Card title="Claude Code" icon="robot" href="/agents/claude-code">
+    Full-featured CLI agent with output styles and markdown-based system prompts
+  </Card>
+  <Card title="OpenCode" icon="code" href="/agents/opencode">
+    Powerful CLI agent with slash commands and file-replace system prompts
+  </Card>
+  <Card title="Gemini CLI" icon="sparkles" href="/agents/gemini-cli">
+    Google's CLI agent with experimental sub-agent support
+  </Card>
+  <Card title="Cursor" icon="arrow-pointer" href="/agents/cursor">
+    Desktop editor with async sub-agents and rules-based configuration
+  </Card>
+  <Card title="VS Code Copilot" icon="microsoft" href="/agents/vscode-copilot">
+    GitHub Copilot in VS Code with instructions and global skills
+  </Card>
+</CardGroup>
+
+## Capability Comparison
+
+| Agent | Skills | MCP | Sub-agents | Output Styles | Slash Commands | Config Path |
+|-------|--------|-----|------------|---------------|----------------|-------------|
+| Claude Code | ✅ | ✅ | ✅ | ✅ | ❌ | `~/.claude` |
+| OpenCode | ✅ | ✅ | ✅ | ❌ | ✅ | `~/.config/opencode` |
+| Gemini CLI | ✅ | ✅ | ⚠️ Experimental | ❌ | ❌ | `~/.gemini` |
+| Cursor | ✅ | ✅ | ✅ Async (v2.5+) | ❌ | ❌ | `~/.cursor` |
+| VS Code Copilot | ✅ | ✅ | ✅ Parallel | ❌ | ❌ | `~/.copilot` + VS Code User |
+
+## Configuration Strategies
+
+Different agents use different approaches for system prompts and MCP configuration:
+
+### System Prompt Strategies
+
+<AccordionGroup>
+  <Accordion title="Markdown Sections (Claude Code)">
+    Uses `<!-- gentle-ai:ID -->` markers to inject content sections into `CLAUDE.md` without overwriting user customizations.
+  </Accordion>
+  
+  <Accordion title="File Replace (OpenCode, Gemini CLI, Cursor)">
+    Completely replaces the system prompt file (`AGENTS.md`, `GEMINI.md`, or `gentle-ai.mdc`) with Gentle AI content.
+  </Accordion>
+  
+  <Accordion title="Instructions File (VS Code Copilot)">
+    Creates a `.instructions.md` file in the VS Code User prompts directory.
+  </Accordion>
+</AccordionGroup>
+
+### MCP Configuration Strategies
+
+<AccordionGroup>
+  <Accordion title="Separate MCP Files (Claude Code)">
+    Writes one JSON file per MCP server in `~/.claude/mcp/` (e.g., `context7.json`).
+  </Accordion>
+  
+  <Accordion title="Merge Into Settings (OpenCode, Gemini CLI)">
+    Merges `mcpServers` configuration into the agent's `settings.json` file.
+  </Accordion>
+  
+  <Accordion title="MCP Config File (Cursor, VS Code Copilot)">
+    Writes to a dedicated `mcp.json` configuration file.
+  </Accordion>
+</AccordionGroup>
+
+## Installation Support
+
+Gentle AI can automatically install CLI-based agents if they're not already present:
+
+| Agent | Auto-Install | Method |
+|-------|--------------|--------|
+| Claude Code | ✅ | Platform-specific (brew/npm/binary) |
+| OpenCode | ✅ | Platform-specific (brew/npm/binary) |
+| Gemini CLI | ✅ | npm global install |
+| Cursor | ❌ | Desktop app—install manually |
+| VS Code Copilot | ❌ | Desktop app—install manually |
+
+<Info>
+Cursor and VS Code Copilot are desktop applications that must be installed manually. Gentle AI will configure them once they're installed.
+</Info>
+
+## What Gets Configured
+
+For each agent, Gentle AI configures:
+
+1. **System Prompt** — Injects SDD orchestration, persona, permissions, and component instructions
+2. **Skills** — Writes skill files (SDD workflow + foundation skills) to the agent's skills directory
+3. **MCP Servers** — Configures Context7 and other MCP servers using the agent's preferred strategy
+4. **Settings** — Updates agent-specific settings for optimal Gentle AI integration
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install and configure your first agent
+  </Card>
+  <Card title="Components" icon="cube" href="/components/engram">
+    Learn about the Gentle AI component ecosystem
+  </Card>
+</CardGroup>

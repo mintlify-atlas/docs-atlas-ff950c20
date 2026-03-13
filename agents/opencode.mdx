@@ -1,0 +1,257 @@
+---
+title: "OpenCode"
+description: "Powerful CLI agent with slash commands and file-replace system prompts"
+---
+
+OpenCode is a CLI agent with full Gentle AI ecosystem support, including skills, MCP servers, slash commands, and file-replace system prompt strategy.
+
+## Support Tier
+
+**Full** — OpenCode receives the complete SDD orchestrator, skill files, MCP integration, system prompt injection, and sub-agent delegation.
+
+## Configuration Paths
+
+### Primary Config Directory
+```bash
+~/.config/opencode/
+```
+
+### File Locations
+
+| Purpose | Path |
+|---------|------|
+| System Prompt | `~/.config/opencode/AGENTS.md` |
+| Skills Directory | `~/.config/opencode/skills/` |
+| Settings File | `~/.config/opencode/opencode.json` |
+| MCP Configs | Merged into `opencode.json` |
+| Slash Commands | `~/.config/opencode/commands/` |
+
+### Windows Paths
+```powershell
+%USERPROFILE%\.config\opencode\AGENTS.md
+%USERPROFILE%\.config\opencode\skills\sdd-init.md
+%USERPROFILE%\.config\opencode\opencode.json
+```
+
+## Configuration Strategies
+
+### System Prompt: File Replace
+
+OpenCode uses **complete file replacement** for system prompts. Gentle AI overwrites `AGENTS.md` with the full Gentle AI system prompt.
+
+**Path:** `~/.config/opencode/AGENTS.md`
+
+<Warning>
+User customizations to `AGENTS.md` will be overwritten. Back up custom instructions before running Gentle AI.
+</Warning>
+
+### MCP: Merge Into Settings
+
+OpenCode merges MCP server configurations into `opencode.json` under the `mcpServers` key.
+
+**Example: opencode.json with MCP servers**
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@context-labs/mcp-server-context7"],
+      "env": {
+        "CONTEXT7_API_KEY": "your-api-key"
+      }
+    },
+    "engram": {
+      "command": "npx",
+      "args": ["-y", "@gentleman-programming/mcp-server-engram"],
+      "env": {}
+    }
+  }
+}
+```
+
+<Info>
+Gentle AI safely merges MCP servers into existing `opencode.json` without overwriting other settings.
+</Info>
+
+## Capabilities
+
+### Skills ✅
+
+Skills are written to `~/.config/opencode/skills/` as markdown files:
+
+```bash
+~/.config/opencode/skills/
+├── sdd-init.md
+├── sdd-explore.md
+├── sdd-propose.md
+├── sdd-spec.md
+├── sdd-design.md
+├── sdd-tasks.md
+├── sdd-apply.md
+├── sdd-verify.md
+├── sdd-archive.md
+├── go-testing.md
+└── skill-creator.md
+```
+
+### MCP Servers ✅
+
+MCP servers are merged into `opencode.json`. Gentle AI configures:
+
+- **Context7** — Live framework/library documentation
+- **Engram** — Persistent cross-session memory
+
+### Sub-agents ✅
+
+OpenCode supports native sub-agent delegation. The SDD orchestrator uses sub-agents for parallel task execution.
+
+### Slash Commands ✅
+
+OpenCode is the **only agent** that supports custom slash commands via `~/.config/opencode/commands/`.
+
+Gentle AI can optionally install slash commands for SDD workflow shortcuts.
+
+**Example:** `/sdd-init`, `/sdd-propose`, `/sdd-apply`
+
+### Output Styles ❌
+
+OpenCode does not support custom output styles. Use Claude Code if you need output style support.
+
+## Installation
+
+### Auto-Install Support ✅
+
+Gentle AI can automatically install OpenCode if it's not already present.
+
+**Detection Method:** Checks for `opencode` binary on PATH.
+
+### Installation Commands (by Platform)
+
+<Tabs>
+  <Tab title="macOS">
+    ```bash
+    # Homebrew (preferred)
+    brew install opencode
+    
+    # Or install via gentle-ai
+    gentle-ai install --agent opencode
+    ```
+  </Tab>
+  
+  <Tab title="Linux (Debian/Ubuntu)">
+    ```bash
+    # NPM global install
+    npm install -g @anomalyco/opencode
+    
+    # Or install via gentle-ai
+    gentle-ai install --agent opencode
+    ```
+  </Tab>
+  
+  <Tab title="Linux (Arch)">
+    ```bash
+    # NPM global install
+    npm install -g @anomalyco/opencode
+    
+    # Or install via gentle-ai
+    gentle-ai install --agent opencode
+    ```
+  </Tab>
+  
+  <Tab title="Windows">
+    ```powershell
+    # NPM global install
+    npm install -g @anomalyco/opencode
+    
+    # Or install via gentle-ai
+    gentle-ai.exe install --agent opencode
+    ```
+  </Tab>
+</Tabs>
+
+## Example Configuration
+
+### Full Gentleman Preset
+
+```bash
+gentle-ai install \
+  --agent opencode \
+  --preset full-gentleman
+```
+
+This installs:
+- ✅ All SDD skills (9 files)
+- ✅ Foundation skills (go-testing, skill-creator)
+- ✅ Context7 + Engram MCP servers
+- ✅ Gentleman persona
+- ✅ Permissions + security defaults
+- ✅ Slash commands (optional)
+- ✅ GGA integration (optional)
+
+### Ecosystem Only
+
+```bash
+gentle-ai install \
+  --agent opencode \
+  --preset ecosystem-only
+```
+
+This installs:
+- ✅ P0 skills only (critical SDD workflow)
+- ✅ Context7 + Engram MCP servers
+- ✅ Gentleman persona
+- ✅ Permissions + security defaults
+
+### Custom Configuration
+
+```bash
+gentle-ai install \
+  --agent opencode \
+  --component engram,sdd,skills,context7 \
+  --skill sdd-init,sdd-explore,sdd-propose,go-testing \
+  --persona neutral
+```
+
+## Implementation Details
+
+**Source Code:** `internal/agents/opencode/adapter.go`
+
+**Agent ID:** `opencode`
+
+**Support Tier:** `TierFull`
+
+**System Prompt Strategy:** `StrategyFileReplace`
+
+**MCP Strategy:** `StrategyMergeIntoSettings`
+
+## Comparison with Claude Code
+
+| Feature | OpenCode | Claude Code |
+|---------|----------|-------------|
+| System Prompt | File Replace | Markdown Sections |
+| MCP Config | Merge into settings.json | Separate files |
+| Slash Commands | ✅ Yes | ❌ No |
+| Output Styles | ❌ No | ✅ Yes |
+| Skills | ✅ Yes | ✅ Yes |
+| Sub-agents | ✅ Yes | ✅ Yes |
+
+<Info>
+OpenCode's file-replace strategy means you can't add custom instructions alongside Gentle AI content. For more flexibility, use Claude Code's markdown-sections strategy.
+</Info>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation Guide" icon="download" href="/installation">
+    Install Gentle AI and configure OpenCode
+  </Card>
+  <Card title="Components" icon="cube" href="/components/engram">
+    Learn about the Gentle AI component ecosystem
+  </Card>
+  <Card title="Skills" icon="brain" href="/components/skills">
+    Explore SDD and foundation skills
+  </Card>
+  <Card title="MCP Servers" icon="plug" href="/components/context7">
+    Configure Context7 and Engram
+  </Card>
+</CardGroup>

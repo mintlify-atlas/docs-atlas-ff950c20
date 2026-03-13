@@ -1,0 +1,402 @@
+---
+title: 'Dry Run Mode'
+description: 'Preview install plans without applying changes'
+---
+
+## Overview
+
+Dry run mode lets you preview what `gentle-ai install` will do before making any changes to your system. It shows:
+
+- Which agents will be configured
+- Which components will be installed
+- Dependency resolution order
+- Platform-specific commands
+- Missing dependencies
+
+No files are written. No commands are executed.
+
+## Usage
+
+```bash
+gentle-ai install --dry-run [options]
+```
+
+Combine `--dry-run` with any install flags:
+
+```bash
+# Preview full-gentleman preset
+gentle-ai install --dry-run --preset full-gentleman
+
+# Preview custom configuration
+gentle-ai install --dry-run \
+  --agent claude-code \
+  --component engram,sdd,skills \
+  --skill go-testing,skill-creator
+
+# Preview minimal setup
+gentle-ai install --dry-run --preset minimal
+```
+
+## Output Format
+
+Dry run produces a plain-text report:
+
+```
+AI Gentle Stack dry-run
+=====================
+Agents: claude-code,opencode
+Unsupported agents: none
+Persona: gentleman
+Preset: full-gentleman
+Components order: engram,sdd,skills,context7,persona,permissions,gga
+Auto-added dependencies: none
+Platform decision: os=darwin distro=n/a package-manager=brew status=supported
+Prepare steps: 2
+Apply steps: 9
+
+Dependency Report
+=================
+Required Dependencies:
+  [✓] git        2.39.0   (required)
+  [✓] curl       7.88.1   (required)
+
+Optional Dependencies:
+  [✓] node       20.11.0  (required for context7)
+  [✓] npm        10.2.4   (required for context7)
+  [✓] brew       4.2.5    (detected)
+  [✓] go         1.24.0   (required for engram on non-brew platforms)
+
+All dependencies present.
+```
+
+## Output Fields
+
+### Agents
+
+Lists which agents will be configured:
+
+```
+Agents: claude-code,opencode
+Unsupported agents: none
+```
+
+- **Agents** - Supported agents that will receive configuration
+- **Unsupported agents** - Requested agents not in the catalog (if any)
+
+### Selection Summary
+
+```
+Persona: gentleman
+Preset: full-gentleman
+```
+
+- **Persona** - Which persona mode will be applied
+- **Preset** - Which preset was selected or inferred
+
+### Component Order
+
+```
+Components order: engram,sdd,skills,context7,persona,permissions,gga
+Auto-added dependencies: none
+```
+
+- **Components order** - Installation order (respects dependencies)
+- **Auto-added dependencies** - Components added by dependency resolver
+
+For example, if you request `skills` without `sdd`, the resolver adds `sdd` as a dependency.
+
+### Platform Decision
+
+```
+Platform decision: os=darwin distro=n/a package-manager=brew status=supported
+```
+
+- **os** - Operating system (darwin, linux, windows)
+- **distro** - Linux distribution (ubuntu, arch, etc.) or `n/a`
+- **package-manager** - Detected package manager (brew, apt, pacman, winget)
+- **status** - `supported` or `unsupported`
+
+### Pipeline Steps
+
+```
+Prepare steps: 2
+Apply steps: 9
+```
+
+- **Prepare steps** - Pre-installation tasks (system check, backup)
+- **Apply steps** - Installation tasks (agent setup, component injection)
+
+Total steps = Prepare + Apply. The TUI progress bar reflects this count.
+
+### Dependency Report
+
+Lists all required and optional dependencies with detection status:
+
+```
+Dependency Report
+=================
+Required Dependencies:
+  [✓] git        2.39.0   (required)
+  [✓] curl       7.88.1   (required)
+
+Optional Dependencies:
+  [✓] node       20.11.0  (required for context7)
+  [✓] npm        10.2.4   (required for context7)
+  [!] go         -        (required for engram on non-brew platforms)
+
+1 missing dependency.
+
+Install missing dependencies:
+  macOS:   brew install go
+  Linux:   apt install golang-go  # Ubuntu/Debian
+  Windows: winget install GoLang.Go
+```
+
+Status indicators:
+- `[✓]` - Present
+- `[!]` - Missing
+- `[?]` - Version unknown
+
+## Examples
+
+### Preview default install
+
+```bash
+$ gentle-ai install --dry-run
+
+AI Gentle Stack dry-run
+=====================
+Agents: claude-code,opencode
+Unsupported agents: none
+Persona: gentleman
+Preset: full-gentleman
+Components order: engram,sdd,skills,context7,persona,permissions,gga
+Auto-added dependencies: none
+Platform decision: os=darwin distro=n/a package-manager=brew status=supported
+Prepare steps: 2
+Apply steps: 9
+```
+
+### Preview minimal preset
+
+```bash
+$ gentle-ai install --dry-run --preset minimal
+
+AI Gentle Stack dry-run
+=====================
+Agents: claude-code
+Unsupported agents: none
+Persona: gentleman
+Preset: minimal
+Components order: engram
+Auto-added dependencies: none
+Platform decision: os=darwin distro=n/a package-manager=brew status=supported
+Prepare steps: 2
+Apply steps: 2
+```
+
+### Preview with missing dependencies
+
+```bash
+$ gentle-ai install --dry-run --preset full-gentleman
+
+AI Gentle Stack dry-run
+=====================
+Agents: claude-code
+Unsupported agents: none
+Persona: gentleman
+Preset: full-gentleman
+Components order: engram,sdd,skills,context7,persona,permissions,gga
+Auto-added dependencies: none
+Platform decision: os=linux distro=ubuntu package-manager=apt status=supported
+Prepare steps: 2
+Apply steps: 8
+
+Dependency Report
+=================
+Required Dependencies:
+  [✓] git        2.39.0   (required)
+  [✓] curl       7.88.1   (required)
+
+Optional Dependencies:
+  [!] node       -        (required for context7)
+  [!] npm        -        (required for context7)
+  [✓] apt        2.7.3    (detected)
+  [!] go         -        (required for engram on non-brew platforms)
+
+3 missing dependencies.
+
+Install missing dependencies:
+  Linux (Ubuntu/Debian):
+    sudo apt update
+    sudo apt install -y nodejs npm golang-go
+```
+
+### Preview unsupported platform
+
+```bash
+$ gentle-ai install --dry-run --preset full-gentleman
+
+AI Gentle Stack dry-run
+=====================
+Agents: claude-code
+Unsupported agents: none
+Persona: gentleman
+Preset: full-gentleman
+Components order: engram,sdd,skills,context7,persona,permissions,gga
+Auto-added dependencies: none
+Platform decision: os=freebsd distro=n/a package-manager=unknown status=unsupported
+Prepare steps: 2
+Apply steps: 8
+
+Warning: Unsupported platform (freebsd).
+Supported platforms: macOS, Linux (Ubuntu/Debian/Arch), Windows 10/11.
+```
+
+## When to Use Dry Run
+
+<CardGroup cols={2}>
+  <Card title="Before First Install" icon="eye">
+    Preview what will change before committing
+  </Card>
+  <Card title="Dependency Check" icon="list-check">
+    Verify all required tools are installed
+  </Card>
+  <Card title="Testing Presets" icon="flask">
+    Compare different preset configurations
+  </Card>
+  <Card title="CI/CD Validation" icon="code-branch">
+    Validate install plans in automated pipelines
+  </Card>
+</CardGroup>
+
+## Implementation
+
+Dry run mode is implemented in `internal/cli/run.go`:
+
+```go
+// internal/cli/run.go:88
+if input.DryRun {
+    return result, nil
+}
+
+// Skip runtime creation, backup, and execution
+```
+
+Source: `internal/cli/run.go:88`
+
+The install pipeline stops before:
+- Creating backups
+- Writing files
+- Running commands
+- Installing binaries
+
+## Dry Run vs Real Install
+
+| Phase | Dry Run | Real Install |
+|-------|---------|-------------|
+| Parse flags | ✓ | ✓ |
+| Detect system | ✓ | ✓ |
+| Resolve dependencies | ✓ | ✓ |
+| Build stage plan | ✓ | ✓ |
+| **Create backup** | ✗ | ✓ |
+| **Install binaries** | ✗ | ✓ |
+| **Write configs** | ✗ | ✓ |
+| **Inject skills** | ✗ | ✓ |
+| **Verify files** | ✗ | ✓ |
+
+## Exit Codes
+
+| Code | Meaning |
+|------|--------|
+| 0 | Success (valid plan) |
+| 1 | Invalid flags |
+| 2 | Unsupported platform |
+
+Dry run exits with code 0 even if dependencies are missing. It is informational only.
+
+## Combining with Other Flags
+
+Dry run works with all install flags:
+
+```bash
+# Test custom configuration
+gentle-ai install --dry-run \
+  --agent claude-code,opencode \
+  --component engram,sdd,skills \
+  --skill sdd-init,sdd-apply,go-testing \
+  --persona neutral
+
+# Test all agents
+gentle-ai install --dry-run \
+  --agent claude-code,opencode,gemini-cli,cursor,vscode-copilot \
+  --preset full-gentleman
+
+# Test minimal with specific agent
+gentle-ai install --dry-run \
+  --agent cursor \
+  --preset minimal
+```
+
+## Redirecting Output
+
+Save dry run output for review:
+
+```bash
+gentle-ai install --dry-run --preset full-gentleman > install-plan.txt
+```
+
+Share plans for review:
+
+```bash
+gentle-ai install --dry-run --preset ecosystem-only | pbcopy  # macOS
+gentle-ai install --dry-run --preset ecosystem-only | xclip   # Linux
+```
+
+## CI/CD Integration
+
+Use dry run in automated pipelines:
+
+```yaml
+# .github/workflows/validate-install.yml
+name: Validate Install
+on: [push, pull_request]
+
+jobs:
+  dry-run:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+      - name: Build
+        run: go build -o gentle-ai ./cmd/gentle-ai
+      - name: Dry run install
+        run: ./gentle-ai install --dry-run --preset full-gentleman
+```
+
+## Related Commands
+
+- [`gentle-ai install`](/cli/install) - Run actual installation
+- [`gentle-ai update`](/cli/update) - Check for updates
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Install Command" icon="download" href="/cli/install">
+    Full install reference
+  </Card>
+  <Card title="Presets" icon="layer-group" href="/cli/presets">
+    Preset configurations
+  </Card>
+  <Card title="Flags" icon="flag" href="/cli/flags">
+    All CLI flags
+  </Card>
+  <Card title="Platform Support" icon="computer" href="/platforms/overview">
+    Supported platforms
+  </Card>
+</CardGroup>

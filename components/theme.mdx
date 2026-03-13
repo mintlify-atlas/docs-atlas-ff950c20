@@ -1,0 +1,225 @@
+---
+title: Theme
+description: Gentleman Kanagawa theme overlay (future)
+---
+
+# Theme
+
+The Theme component is a **future feature** that will apply the Gentleman Kanagawa visual theme to compatible AI agents. Currently, it sets a theme preference in configuration files but does not include theme assets.
+
+## What is Theme?
+
+When fully implemented, the theme component will provide:
+- **Consistent visual identity**: Gentleman branding across agents
+- **Kanagawa color palette**: Inspired by the Japanese wave aesthetic
+- **Dark mode optimized**: Easy on the eyes during long coding sessions
+- **Syntax highlighting**: Coordinated colors for code blocks
+- **UI elements**: Buttons, panels, and chrome styled for Gentleman
+
+## Current Status
+
+**Implementation**: Minimal (configuration only)
+
+The theme component currently:
+- Writes `"theme": "gentleman-kanagawa"` to agent settings files
+- Does NOT include actual theme assets (CSS, colors, fonts)
+- Acts as a placeholder for future theme installation
+
+Source: `internal/components/theme/inject.go:16`
+
+## Configuration Files Written
+
+Theme modifies agent settings files:
+
+| Agent | File Modified | Key Added |
+|-------|---------------|------------|
+| Claude Code | `~/.config/claude-code/settings.json` | `"theme": "gentleman-kanagawa"` |
+| OpenCode | `~/.config/opencode/opencode.json` | `"theme": "gentleman-kanagawa"` |
+| Gemini CLI | `~/.gemini/settings.json` | `"theme": "gentleman-kanagawa"` |
+| Generic | Agent's settings file | `"theme": "gentleman-kanagawa"` |
+
+Source: `internal/components/theme/inject.go:18-30`
+
+## Installation Behavior
+
+The theme component:
+
+1. **Check settings path**: Only runs if agent has a settings file
+2. **Merge theme key**: Deep merge `{"theme": "gentleman-kanagawa"}` into existing settings
+3. **Report changes**: Return whether file was modified
+
+Source: `internal/components/theme/inject.go:18-30`
+
+```go
+func Inject(homeDir string, adapter agents.Adapter) (InjectionResult, error) {
+    settingsPath := adapter.SettingsPath(homeDir)
+    if settingsPath == "" {
+        return InjectionResult{}, nil // No settings file
+    }
+
+    overlay := []byte("{\n  \"theme\": \"gentleman-kanagawa\"\n}\n")
+    writeResult, err := mergeJSONFile(settingsPath, overlay)
+    if err != nil {
+        return InjectionResult{}, err
+    }
+
+    return InjectionResult{
+        Changed: writeResult.Changed,
+        Files:   []string{settingsPath},
+    }, nil
+}
+```
+
+## Future Implementation
+
+When theme is fully implemented, it will:
+
+### 1. Theme Assets
+
+Install theme files to agent-specific directories:
+
+```
+~/.config/claude-code/themes/gentleman-kanagawa/
+├── theme.json          # Theme metadata
+├── colors.json         # Kanagawa color palette
+├── syntax.json         # Syntax highlighting rules
+└── ui.css              # UI element styling
+```
+
+### 2. Color Palette
+
+Kanagawa-inspired colors:
+
+```json
+{
+  "palette": {
+    "background": {
+      "primary": "#1F1F28",
+      "secondary": "#2A2A37",
+      "tertiary": "#363646"
+    },
+    "foreground": {
+      "primary": "#DCD7BA",
+      "secondary": "#C8C093",
+      "muted": "#727169"
+    },
+    "accent": {
+      "wave": "#7E9CD8",      // Blue wave
+      "foam": "#7FB4CA",      // Cyan foam
+      "cherry": "#D27E99",    // Pink cherry blossom
+      "fire": "#FF5D62",      // Red fire
+      "gold": "#DCA561"       // Gold autumn
+    },
+    "syntax": {
+      "keyword": "#957FB8",
+      "function": "#7E9CD8",
+      "string": "#98BB6C",
+      "number": "#D27E99",
+      "comment": "#727169"
+    }
+  }
+}
+```
+
+### 3. Syntax Highlighting
+
+Coordinated colors for code blocks:
+
+```typescript
+// Keywords in purple
+const function = async () => {
+  // Functions in blue
+  return fetchData(
+    // Strings in green
+    "https://api.example.com",
+    // Numbers in pink
+    { timeout: 5000 }
+  );
+};
+// Comments in muted gray
+```
+
+### 4. UI Elements
+
+Styled components:
+- **Buttons**: Subtle wave blue with hover states
+- **Panels**: Dark background with soft borders
+- **Inputs**: Focused state with accent colors
+- **Scrollbars**: Minimal, dark theme
+
+## Kanagawa Aesthetic
+
+The theme name "Kanagawa" references **"The Great Wave off Kanagawa"** by Hokusai—a famous Japanese woodblock print. The aesthetic combines:
+
+- **Wave blues**: Deep ocean to light foam gradient
+- **Natural earth tones**: Wood, stone, autumn leaves
+- **Muted elegance**: No harsh neon colors
+- **High contrast**: Easy readability in dark environments
+
+This aligns with the Gentleman philosophy: **elegant, precise, and timeless**.
+
+## Why Theme is Future
+
+Theme implementation is deferred because:
+
+1. **Agent theme support varies**: Not all agents support custom themes yet
+2. **Theme formats differ**: Each agent uses different theme schemas
+3. **MVP focus**: Core functionality (Engram, SDD, Skills) takes priority
+4. **Design work**: Creating a cohesive theme requires design expertise
+
+The current placeholder ensures:
+- Configuration key is reserved
+- Future theme installation can detect existing preference
+- Users can manually install themes if they create one
+
+## Manual Theme Installation (Advanced)
+
+If you want to create a Gentleman theme now:
+
+### For VS Code-based Agents
+
+1. Create a VS Code theme extension
+2. Use Kanagawa color palette (see Future Implementation above)
+3. Install extension locally
+4. Reference in settings: `"workbench.colorTheme": "Gentleman Kanagawa"`
+
+### For Terminal-based Agents
+
+1. Configure terminal colors (iTerm2, Alacritty, etc.)
+2. Use Kanagawa palette for ANSI colors
+3. Export terminal theme
+4. Share with team via dotfiles
+
+### For Web-based Agents
+
+1. Create a user stylesheet (Stylus, Tampermonkey)
+2. Override agent CSS with Kanagawa colors
+3. Apply to agent domain
+
+## FAQ
+
+<Accordion title="Does theme do anything right now?">
+  Not visually. It sets a configuration key, but since theme assets don't exist yet, agents will ignore it or fall back to default themes.
+</Accordion>
+
+<Accordion title="When will theme be fully implemented?">
+  No timeline yet. Theme is planned for a future release after core components are stable.
+</Accordion>
+
+<Accordion title="Can I create my own Gentleman theme?">
+  Absolutely! Use the Kanagawa color palette (see Future Implementation) and create a theme for your agent. Share it with the community!
+</Accordion>
+
+<Accordion title="Will theme override my existing theme?">
+  Only if your agent supports `"theme"` key in settings AND a `"gentleman-kanagawa"` theme is installed. Since the theme doesn't exist yet, your current theme is safe.
+</Accordion>
+
+<Accordion title="Can I disable theme installation?">
+  Yes. Edit your agent's settings file and remove the `"theme": "gentleman-kanagawa"` line. Or choose "Custom" persona during install, which skips theme.
+</Accordion>
+
+## Related Components
+
+- [Persona](/components/persona) - Visual styling would complement Gentleman personality
+- [Permissions](/components/permissions) - Theme has no security implications
+- [Context7](/components/context7) - Theme would style doc snippets in responses

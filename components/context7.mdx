@@ -1,0 +1,257 @@
+---
+title: Context7
+description: Latest framework and library docs via MCP
+---
+
+# Context7
+
+Context7 is an MCP (Model Context Protocol) server that provides AI agents with access to the latest documentation for popular frameworks and libraries. Instead of relying on training data, agents can query live docs.
+
+## What is Context7?
+
+Context7 gives your AI agent real-time access to:
+- **Framework documentation**: React, Vue, Next.js, Nuxt, Angular, etc.
+- **Library docs**: TypeScript, Tailwind CSS, and more
+- **Up-to-date content**: Always reflects the latest stable versions
+- **Semantic search**: Query by topic or feature name
+
+This is especially valuable for:
+- New framework features not in the AI's training data
+- Breaking changes between versions
+- Accurate API references
+- Best practices from official docs
+
+## How It Works
+
+Context7 is installed as an MCP server that your AI agent accesses through tool calls. Gentle AI configures the MCP connection based on your agent's capabilities.
+
+### Remote vs. Local MCP
+
+| Agent | Strategy | Configuration |
+|-------|----------|---------------|
+| OpenCode | Remote MCP | Connects to `https://mcp.context7.com/mcp` |
+| VS Code Copilot | Remote MCP | HTTP connection via `mcp.json` |
+| Claude Code | Local MCP (npx) | Runs `npx -y @upstash/context7-mcp` |
+| Gemini CLI | Local MCP (npx) | Runs `npx -y @upstash/context7-mcp` |
+| Cursor | Remote MCP | HTTP connection via `mcp.json` |
+
+Source: `internal/components/mcp/context7.go:1-36`
+
+## Configuration Files Written
+
+<CardGroup cols={2}>
+  <Card title="OpenCode" icon="code">
+    Merges into `~/.config/opencode/opencode.json`:
+    ```json
+    {
+      "mcp": {
+        "context7": {
+          "type": "remote",
+          "url": "https://mcp.context7.com/mcp",
+          "enabled": true
+        }
+      }
+    }
+    ```
+  </Card>
+  <Card title="Claude Code" icon="wave">
+    Writes separate file to `~/.config/claude-code/mcp-servers/context7.json`:
+    ```json
+    {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
+    }
+    ```
+  </Card>
+  <Card title="Gemini CLI" icon="sparkles">
+    Merges into `~/.gemini/settings.json`:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp"]
+        }
+      }
+    }
+    ```
+  </Card>
+  <Card title="VS Code Copilot / Cursor" icon="cursor">
+    Merges into `~/.cursor/mcp.json` or VS Code equivalent:
+    ```json
+    {
+      "servers": {
+        "context7": {
+          "type": "http",
+          "url": "https://mcp.context7.com/mcp"
+        }
+      }
+    }
+    ```
+  </Card>
+</CardGroup>
+
+Source: `internal/components/mcp/inject.go:17-84`
+
+## Installation Strategies
+
+The Context7 component uses three different strategies based on agent capabilities:
+
+### 1. Separate MCP Files Strategy
+
+Used by: **Claude Code**
+
+Writes a standalone JSON file per MCP server:
+
+```go
+func injectSeparateFile(homeDir string, adapter agents.Adapter) {
+    path := adapter.MCPConfigPath(homeDir, "context7")
+    writeFileAtomic(path, DefaultContext7ServerJSON(), 0o644)
+}
+```
+
+Source: `internal/components/mcp/inject.go:35-42`
+
+### 2. Merge Into Settings Strategy
+
+Used by: **OpenCode**, **Gemini CLI**
+
+Merges MCP config into the main settings file:
+
+```go
+func injectMergeIntoSettings(homeDir string, adapter agents.Adapter) {
+    settingsPath := adapter.SettingsPath(homeDir)
+    overlay := DefaultContext7OverlayJSON()
+    if adapter.Agent() == AgentOpenCode {
+        overlay = OpenCodeContext7OverlayJSON() // Use remote MCP format
+    }
+    mergeJSONFile(settingsPath, overlay)
+}
+```
+
+Source: `internal/components/mcp/inject.go:45-62`
+
+### 3. MCP Config File Strategy
+
+Used by: **Cursor**, **VS Code Copilot**
+
+Writes to a dedicated `mcp.json` config file:
+
+```go
+func injectMCPConfigFile(homeDir string, adapter agents.Adapter) {
+    path := adapter.MCPConfigPath(homeDir, "context7")
+    overlay := DefaultContext7OverlayJSON()
+    if adapter.Agent() == AgentVSCodeCopilot {
+        overlay = VSCodeContext7OverlayJSON()
+    }
+    mergeJSONFile(path, overlay)
+}
+```
+
+Source: `internal/components/mcp/inject.go:65-84`
+
+## Supported Frameworks
+
+Context7 provides docs for:
+
+- **React** (including React 19)
+- **Vue** (Vue 3)
+- **Next.js**
+- **Nuxt**
+- **Angular**
+- **TypeScript**
+- **Tailwind CSS**
+- And more...
+
+The catalog is continuously updated by the Context7 team at Upstash.
+
+## Usage Example
+
+Once installed, your AI agent can query Context7:
+
+```typescript
+// Agent queries React 19 docs
+context7_search({
+  framework: "react",
+  query: "use action hooks"
+})
+
+// Returns:
+// - useActionState documentation
+// - useOptimistic documentation
+// - Form actions examples
+```
+
+The agent receives relevant doc snippets and can reference accurate API signatures.
+
+## Why Context7 Matters
+
+### Problem: Stale Training Data
+
+AI models are trained on data up to a certain cutoff date. For example:
+- React 19 (released late 2024) isn't in models trained mid-2024
+- New framework features appear after training
+- Breaking changes between versions cause incorrect suggestions
+
+### Solution: Live Documentation
+
+Context7 solves this by:
+1. **Always current**: Docs reflect the latest stable releases
+2. **Official sources**: Content comes from framework maintainers
+3. **Semantic search**: Agents find relevant sections quickly
+4. **Zero manual updates**: Upstash maintains the doc catalog
+
+## Performance Considerations
+
+### Remote MCP (OpenCode, VS Code Copilot, Cursor)
+
+**Pros**:
+- No local dependencies (no `npx` required)
+- Faster startup (no package download)
+- Works in restricted environments
+
+**Cons**:
+- Requires internet connection
+- Slight latency for HTTP requests
+
+### Local MCP (Claude Code, Gemini CLI)
+
+**Pros**:
+- Lower latency (local process)
+- Works offline (after initial `npx` download)
+
+**Cons**:
+- Requires Node.js and `npx` installed
+- First run downloads the package
+- Slightly slower startup
+
+## FAQ
+
+<Accordion title="Do I need Node.js installed?">
+  Only if your agent uses the local MCP strategy (Claude Code, Gemini CLI). Remote MCP agents (OpenCode, VS Code Copilot, Cursor) don't require Node.js.
+</Accordion>
+
+<Accordion title="What if Context7 is down?">
+  Remote MCP agents will fail to connect. Your AI agent will still work but won't have access to live framework docs. Local MCP agents (using `npx`) are unaffected by Context7 server downtime after the initial package download.
+</Accordion>
+
+<Accordion title="Can I use Context7 without Gentle AI?">
+  Yes! Context7 is an independent MCP server from Upstash. Gentle AI just configures it for you. You can manually add the MCP config to any agent that supports MCP.
+</Accordion>
+
+<Accordion title="How often are docs updated?">
+  Context7 updates its doc catalog regularly to track stable releases of supported frameworks. Check the Upstash Context7 docs for the latest coverage.
+</Accordion>
+
+<Accordion title="Does Context7 consume tokens?">
+  Yes. When your agent queries Context7, the returned doc snippets are added to the conversation context and consume tokens. Use targeted queries to minimize usage.
+</Accordion>
+
+## Related Components
+
+- [Engram](/components/engram) - Another MCP server for persistent memory
+- [Permissions](/components/permissions) - Security guardrails for tool usage
+- [SDD](/components/sdd) - Uses Context7 for framework-specific patterns

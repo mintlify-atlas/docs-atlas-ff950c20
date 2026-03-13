@@ -1,0 +1,290 @@
+---
+title: Platform Overview
+description: Cross-platform support for macOS, Linux, and Windows
+---
+
+## Supported Platforms
+
+Gentle AI works on all major operating systems with intelligent platform detection and package manager integration.
+
+<CardGroup cols={3}>
+  <Card title="macOS" icon="apple" href="/platforms/macos">
+    10.15+ (Catalina or later)
+    
+    Intel and Apple Silicon
+  </Card>
+  <Card title="Linux" icon="linux" href="/platforms/linux">
+    Ubuntu 20.04+, Debian 11+, Arch
+    
+    Derivatives auto-detected
+  </Card>
+  <Card title="Windows" icon="windows" href="/platforms/windows">
+    Windows 10/11
+    
+    PowerShell 5.1+ or Core 7+
+  </Card>
+</CardGroup>
+
+## Platform Detection
+
+Gentle AI automatically detects your environment:
+
+### Operating System
+
+```go
+// internal/system/detect.go:34
+runtime.GOOS  // darwin, linux, windows
+runtime.GOARCH // amd64, arm64
+```
+
+<Tabs>
+  <Tab title="macOS">
+    **Detection**:
+    - OS: `darwin`
+    - Arch: `amd64` (Intel) or `arm64` (Apple Silicon)
+    - Package Manager: Homebrew (default)
+  </Tab>
+  
+  <Tab title="Linux">
+    **Detection**:
+    - OS: `linux`
+    - Distro: Parsed from `/etc/os-release`
+      - Ubuntu (ID=ubuntu or ID_LIKE contains ubuntu)
+      - Debian (ID=debian or ID_LIKE contains debian)
+      - Arch (ID=arch or ID_LIKE contains arch)
+    - Package Manager: apt, pacman, or brew (if installed)
+  </Tab>
+  
+  <Tab title="Windows">
+    **Detection**:
+    - OS: `windows`
+    - Arch: `amd64` or `arm64`
+    - Package Manager: winget (default)
+    - Shell: PowerShell (when $SHELL not set)
+  </Tab>
+</Tabs>
+
+### Package Managers
+
+Gentle AI detects and uses your system's package manager:
+
+| Platform | Default | Detected | Install Command |
+|----------|---------|----------|----------------|
+| macOS | Homebrew | `brew --version` | `brew install` |
+| Ubuntu/Debian | apt | `apt --version` | `sudo apt install` |
+| Arch Linux | pacman | `pacman --version` | `sudo pacman -S` |
+| Windows | winget | `winget --version` | `winget install` |
+
+<Info>
+On Linux, if Homebrew is installed, Gentle AI prefers it over apt/pacman for better cross-platform consistency.
+</Info>
+
+### Dependency Detection
+
+Gentle AI checks for required tools:
+
+```bash
+# Tools checked
+git --version
+curl --version
+node --version
+npm --version
+```
+
+**Result**:
+- `Installed`: Tool found and version detected
+- `Not Found`: Missing dependency
+- `InstallHint`: Platform-specific command to install
+
+## Release Binaries
+
+Pre-built binaries are available for all platforms:
+
+### Available Architectures
+
+| OS | Architecture | Archive Format | Binary Name |
+|----|--------------|---------------|-------------|
+| macOS | amd64 (Intel) | `.tar.gz` | `gentle-ai` |
+| macOS | arm64 (Apple Silicon) | `.tar.gz` | `gentle-ai` |
+| Linux | amd64 | `.tar.gz` | `gentle-ai` |
+| Linux | arm64 | `.tar.gz` | `gentle-ai` |
+| Windows | amd64 | `.zip` | `gentle-ai.exe` |
+| Windows | arm64 | `.zip` | `gentle-ai.exe` |
+
+### Download URLs
+
+```bash
+# Example release URLs
+https://github.com/Gentleman-Programming/gentle-ai/releases/download/v1.0.0/gentle-ai_1.0.0_darwin_amd64.tar.gz
+https://github.com/Gentleman-Programming/gentle-ai/releases/download/v1.0.0/gentle-ai_1.0.0_darwin_arm64.tar.gz
+https://github.com/Gentleman-Programming/gentle-ai/releases/download/v1.0.0/gentle-ai_1.0.0_linux_amd64.tar.gz
+https://github.com/Gentleman-Programming/gentle-ai/releases/download/v1.0.0/gentle-ai_1.0.0_linux_arm64.tar.gz
+https://github.com/Gentleman-Programming/gentle-ai/releases/download/v1.0.0/gentle-ai_1.0.0_windows_amd64.zip
+https://github.com/Gentleman-Programming/gentle-ai/releases/download/v1.0.0/gentle-ai_1.0.0_windows_arm64.zip
+```
+
+## Configuration Paths
+
+Agent configuration paths vary by platform:
+
+### macOS / Linux
+
+```bash
+~/.claude/                    # Claude Code
+~/.config/opencode/           # OpenCode
+~/.gemini/                    # Gemini CLI
+~/.cursor/                    # Cursor
+~/.copilot/                   # VS Code Copilot (skills)
+~/Library/Application Support/Code/User/   # VS Code (macOS)
+~/.config/Code/User/          # VS Code (Linux)
+```
+
+### Windows
+
+```powershell
+%USERPROFILE%\.claude\                      # Claude Code
+%USERPROFILE%\.config\opencode\             # OpenCode
+%USERPROFILE%\.gemini\                      # Gemini CLI
+%USERPROFILE%\.cursor\                      # Cursor
+%USERPROFILE%\.copilot\                     # VS Code Copilot (skills)
+%APPDATA%\Code\User\                        # VS Code
+```
+
+<Accordion title="Path Resolution">
+Gentle AI uses Go's `os.UserHomeDir()` to resolve the home directory:
+
+- **macOS/Linux**: `$HOME`
+- **Windows**: `%USERPROFILE%`
+
+All paths are expanded from this base.
+</Accordion>
+
+## Platform-Specific Behavior
+
+### npm Global Installs
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    **Default**: Requires `sudo` for system-wide npm prefix.
+    
+    **Detection**: Gentle AI checks if npm prefix is user-writable:
+    ```bash
+    npm config get prefix
+    # If starts with $HOME → user-writable (no sudo needed)
+    # If /usr/local or /usr → requires sudo
+    ```
+    
+    **Recommendation**: Use a node version manager (nvm/fnm/volta):
+    ```bash
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+    nvm install node
+    ```
+  </Tab>
+  
+  <Tab title="Windows">
+    **Default**: User-writable by default (no admin required).
+    
+    npm global prefix on Windows is typically:
+    ```
+    %APPDATA%\npm
+    ```
+    
+    This is user-writable, so Gentle AI does not require elevation.
+  </Tab>
+</Tabs>
+
+### Shell Detection
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    Reads `$SHELL` environment variable:
+    ```bash
+    echo $SHELL
+    # /bin/bash
+    # /bin/zsh
+    # /usr/bin/fish
+    ```
+  </Tab>
+  
+  <Tab title="Windows">
+    Defaults to PowerShell when `$SHELL` not set:
+    ```powershell
+    powershell
+    # or
+    pwsh  # PowerShell Core
+    ```
+  </Tab>
+</Tabs>
+
+### Archive Formats
+
+- **macOS / Linux**: `.tar.gz` (extract with `tar -xzf`)
+- **Windows**: `.zip` (extract with `Expand-Archive`)
+
+## Platform Comparison
+
+| Feature | macOS | Linux | Windows |
+|---------|-------|-------|----------|
+| **TUI** | ✓ Full support | ✓ Full support | ✓ Full support |
+| **CLI** | ✓ Full support | ✓ Full support | ✓ Full support |
+| **Homebrew** | ✓ Default | ✓ Optional | ✗ Not available |
+| **npm sudo** | ⚠️ Required (unless nvm) | ⚠️ Required (unless nvm) | ✓ Not required |
+| **curl** | ✓ Pre-installed | ✓ Pre-installed | ✓ Pre-installed (Win10+) |
+| **Checksums** | SHA256 | SHA256 | SHA256 |
+| **Auto-update** | Via brew | Via package manager | Via winget |
+
+## Testing Coverage
+
+Gentle AI is tested across platforms:
+
+### Docker E2E Tests
+
+```bash
+# Ubuntu container
+e2e/ubuntu/Dockerfile
+
+# Arch Linux container
+e2e/arch/Dockerfile
+```
+
+Run with:
+```bash
+RUN_FULL_E2E=1 ./e2e/docker-test.sh
+```
+
+### Test Matrix
+
+- **26 test packages** across the codebase
+- **260+ test functions** with cross-platform path validation
+- **78 E2E tests** in Docker (Ubuntu + Arch)
+- **17 golden files** for snapshot testing
+
+<Info>
+Windows testing is done manually due to GitHub Actions Windows runner limitations. Community contributions for Windows CI welcome!
+</Info>
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card
+    title="macOS Setup"
+    icon="apple"
+    href="/platforms/macos"
+  >
+    Mac-specific installation and configuration
+  </Card>
+  <Card
+    title="Linux Setup"
+    icon="linux"
+    href="/platforms/linux"
+  >
+    Linux distribution guides
+  </Card>
+  <Card
+    title="Windows Setup"
+    icon="windows"
+    href="/platforms/windows"
+  >
+    Windows-specific instructions
+  </Card>
+</CardGroup>

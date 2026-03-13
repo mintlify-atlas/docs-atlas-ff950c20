@@ -1,0 +1,392 @@
+---
+title: macOS
+description: Installing and configuring Gentle AI on macOS
+---
+
+## System Requirements
+
+- **macOS Version**: 10.15 (Catalina) or later
+- **Architecture**: Intel (amd64) or Apple Silicon (arm64)
+- **Package Manager**: Homebrew (recommended)
+
+<CardGroup cols={2}>
+  <Card title="Intel Macs" icon="microchip">
+    x86_64 / amd64 architecture
+    
+    Supported from 2015 onwards
+  </Card>
+  <Card title="Apple Silicon" icon="chip">
+    ARM64 architecture (M1, M2, M3)
+    
+    Native ARM builds available
+  </Card>
+</CardGroup>
+
+## Installation
+
+### Quick Install (Recommended)
+
+Use the curl installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/scripts/install.sh | bash
+```
+
+This downloads the correct binary for your architecture and launches the TUI.
+
+### Homebrew
+
+Install via Homebrew tap:
+
+```bash
+brew tap Gentleman-Programming/homebrew-tap
+brew install gentle-ai
+```
+
+**Benefits**:
+- Auto-updates with `brew upgrade`
+- Dependency management
+- Uninstall with `brew uninstall gentle-ai`
+
+<Tip>
+Homebrew automatically detects your architecture (Intel vs Apple Silicon) and installs the correct binary.
+</Tip>
+
+### Go Install
+
+If you have Go 1.24+ installed:
+
+```bash
+go install github.com/gentleman-programming/gentle-ai/cmd/gentle-ai@latest
+```
+
+Make sure `$GOPATH/bin` is in your `$PATH`:
+
+```bash
+export PATH="$HOME/go/bin:$PATH"
+```
+
+### Manual Download
+
+Download from [GitHub Releases](https://github.com/Gentleman-Programming/gentle-ai/releases):
+
+<CodeGroup>
+
+```bash Intel Mac
+# Download
+wget https://github.com/Gentleman-Programming/gentle-ai/releases/download/v1.0.0/gentle-ai_1.0.0_darwin_amd64.tar.gz
+
+# Extract
+tar -xzf gentle-ai_1.0.0_darwin_amd64.tar.gz
+
+# Install
+sudo mv gentle-ai /usr/local/bin/
+```
+
+```bash Apple Silicon
+# Download
+wget https://github.com/Gentleman-Programming/gentle-ai/releases/download/v1.0.0/gentle-ai_1.0.0_darwin_arm64.tar.gz
+
+# Extract
+tar -xzf gentle-ai_1.0.0_darwin_arm64.tar.gz
+
+# Install
+sudo mv gentle-ai /usr/local/bin/
+```
+
+</CodeGroup>
+
+## Dependencies
+
+### Required Tools
+
+Gentle AI requires these tools:
+
+| Tool | Install Command | Check |
+|------|----------------|-------|
+| git | `brew install git` | `git --version` |
+| curl | Pre-installed | `curl --version` |
+| node | `brew install node` | `node --version` |
+| npm | Included with node | `npm --version` |
+
+<Info>
+`curl` is pre-installed on macOS 10.13+. You typically don't need to install it separately.
+</Info>
+
+### Installing Missing Dependencies
+
+If Gentle AI detects missing dependencies:
+
+```bash
+# Install all at once
+brew install git node
+
+# Or individually
+brew install git
+brew install node
+```
+
+### Node Version Management
+
+Recommended: Use a node version manager to avoid npm permission issues.
+
+<Accordion title="nvm (Node Version Manager)">
+```bash
+# Install nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+
+# Reload shell
+source ~/.zshrc  # or ~/.bashrc
+
+# Install node
+nvm install node
+nvm use node
+
+# Verify
+node --version
+npm --version
+```
+
+**Benefits**:
+- No sudo needed for npm global installs
+- Easy node version switching
+- Project-specific node versions
+</Accordion>
+
+<Accordion title="fnm (Fast Node Manager)">
+```bash
+# Install fnm
+brew install fnm
+
+# Add to shell config
+echo 'eval "$(fnm env --use-on-cd)"' >> ~/.zshrc
+source ~/.zshrc
+
+# Install node
+fnm install --lts
+
+# Verify
+node --version
+npm --version
+```
+
+**Benefits**:
+- Faster than nvm
+- Written in Rust
+- Auto-switches based on `.nvmrc`
+</Accordion>
+
+## Configuration Paths
+
+### Agent Directories
+
+```bash
+~/.claude/                    # Claude Code
+~/.config/opencode/           # OpenCode
+~/.gemini/                    # Gemini CLI
+~/.cursor/                    # Cursor
+~/.copilot/                   # VS Code Copilot (skills)
+~/Library/Application Support/Code/User/   # VS Code settings
+```
+
+### Gentle AI Data
+
+```bash
+~/.gentle-ai/
+  backups/                    # Configuration snapshots
+    20260313_123456/
+    20260312_091523/
+  logs/                       # Installation logs (future)
+```
+
+## macOS-Specific Features
+
+### Terminal Compatibility
+
+The Bubbletea TUI works perfectly in:
+
+- **Terminal.app** (built-in)
+- **iTerm2** (recommended)
+- **Alacritty**
+- **Kitty**
+- **Warp**
+- **Hyper**
+
+<Tip>
+For the best TUI experience, use iTerm2 with 256 color support and a Nerd Font (optional but nice).
+</Tip>
+
+### Shell Support
+
+Gentle AI works with all macOS shells:
+
+- **zsh** (default on macOS 10.15+)
+- **bash**
+- **fish**
+- **nu**
+
+Detected via `$SHELL` environment variable.
+
+### Rosetta 2 (Apple Silicon)
+
+If you're on Apple Silicon:
+
+- Use the **arm64** build for native performance
+- Intel (amd64) builds also work via Rosetta 2, but slower
+- Homebrew automatically installs the correct build
+
+<Warning>
+Don't manually install the amd64 build on Apple Silicon. Use the arm64 build for best performance.
+</Warning>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Command not found: gentle-ai">
+    **Issue**: Binary not in PATH.
+    
+    **Solution**:
+    ```bash
+    # Check where it's installed
+    which gentle-ai
+    
+    # If using Homebrew
+    brew list gentle-ai
+    
+    # If using Go install, add to PATH
+    echo 'export PATH="$HOME/go/bin:$PATH"' >> ~/.zshrc
+    source ~/.zshrc
+    ```
+  </Accordion>
+  
+  <Accordion title="npm EACCES permission errors">
+    **Issue**: Cannot install npm packages globally without sudo.
+    
+    **Solution**: Use a node version manager (nvm/fnm) as shown above.
+    
+    Or fix npm permissions:
+    ```bash
+    mkdir ~/.npm-global
+    npm config set prefix '~/.npm-global'
+    echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.zshrc
+    source ~/.zshrc
+    ```
+  </Accordion>
+  
+  <Accordion title="TUI doesn't render colors">
+    **Issue**: Terminal doesn't support 256 colors.
+    
+    **Solution**: Check `$TERM`:
+    ```bash
+    echo $TERM
+    # Should be xterm-256color or similar
+    ```
+    
+    If not, add to `~/.zshrc`:
+    ```bash
+    export TERM=xterm-256color
+    ```
+  </Accordion>
+  
+  <Accordion title="Homebrew installation fails">
+    **Issue**: Homebrew tap or formula not found.
+    
+    **Solution**:
+    ```bash
+    # Update Homebrew
+    brew update
+    
+    # Re-tap
+    brew untap Gentleman-Programming/homebrew-tap
+    brew tap Gentleman-Programming/homebrew-tap
+    
+    # Install
+    brew install gentle-ai
+    ```
+  </Accordion>
+  
+  <Accordion title="Gatekeeper blocks the binary">
+    **Issue**: macOS blocks unsigned binary.
+    
+    **Solution**:
+    
+    1. Try running again
+    2. System Preferences → Security & Privacy
+    3. Click "Allow Anyway" for gentle-ai
+    
+    Or remove quarantine attribute:
+    ```bash
+    xattr -d com.apple.quarantine /usr/local/bin/gentle-ai
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Platform-Specific Notes
+
+### Homebrew Services
+
+Gentle AI is a CLI tool, not a service. You don't need to run `brew services`.
+
+### Code Signing
+
+Currently, Gentle AI binaries are not code-signed. This may trigger Gatekeeper warnings.
+
+**Workaround**: Use Homebrew installation (trusted source) or manually allow in Security & Privacy settings.
+
+### Apple Silicon Compatibility
+
+Gentle AI is fully native on Apple Silicon:
+
+- No Rosetta 2 translation needed
+- Full performance on M1/M2/M3 chips
+- Native ARM64 builds in releases
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Homebrew" icon="beer-mug">
+    Simplest installation and update path
+  </Card>
+  <Card title="Node via nvm/fnm" icon="node">
+    Avoids npm permission issues
+  </Card>
+  <Card title="Modern Terminal" icon="terminal">
+    iTerm2 or Alacritty for best TUI experience
+  </Card>
+  <Card title="Regular Updates" icon="arrows-rotate">
+    Keep Gentle AI updated via `brew upgrade`
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Quickstart"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Complete your first installation
+  </Card>
+  <Card
+    title="Interactive Mode"
+    icon="terminal"
+    href="/guides/interactive-mode"
+  >
+    Learn the TUI workflow
+  </Card>
+  <Card
+    title="Platform Overview"
+    icon="laptop"
+    href="/platforms/overview"
+  >
+    Compare all platforms
+  </Card>
+  <Card
+    title="Troubleshooting"
+    icon="wrench"
+    href="/installation#troubleshooting"
+  >
+    Common installation issues
+  </Card>
+</CardGroup>

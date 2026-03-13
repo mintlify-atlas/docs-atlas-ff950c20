@@ -1,0 +1,565 @@
+---
+title: Architecture
+description: Deep dive into Gentle AI's codebase structure, design patterns, and component architecture
+---
+
+## Architecture Overview
+
+Gentle AI is built on three core principles:
+
+1. **Agent Agnostic** - Adapter pattern abstracts agent differences
+2. **Dependency-Aware** - Graph-based component ordering
+3. **Safe by Default** - Backup before changes, rollback on failure
+
+## High-Level Flow
+
+```
+┌─────────────┐
+│  CLI Entry  │  cmd/gentle-ai/main.go
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────────────────────────────────────┐
+│              App Orchestration                  │
+│  internal/app/                                  │
+│  - TUI mode (interactive)                       │
+│  - CLI mode (flags)                             │
+└──────┬──────────────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────────────┐
+│           Selection & Validation                │
+│  internal/cli/                                  │
+│  - Parse flags                                  │
+│  - Validate preset/component/skill choices      │
+└──────┬──────────────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────────────┐
+│         System Detection                        │
+│  internal/system/                               │
+│  - Detect OS (darwin/linux/windows)             │
+│  - Detect distro (ubuntu/arch/etc.)             │
+│  - Check dependencies (git/npm/node/brew)       │
+└──────┬──────────────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────────────┐
+│       Dependency Planning                       │
+│  internal/planner/                              │
+│  - Build dependency graph                       │
+│  - Resolve component order                      │
+│  - Generate install plan                        │
+└──────┬──────────────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────────────┐
+│            Staged Pipeline                      │
+│  internal/pipeline/                             │
+│  1. PREPARE: validate, detect agents            │
+│  2. APPLY: execute install steps                │
+│  3. ROLLBACK: restore on failure (optional)     │
+└──────┬──────────────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────────────┐
+│         Component Installation                  │
+│  internal/components/                           │
+│  - engram/  - sdd/  - skills/  - mcp/           │
+│  - persona/  - theme/  - permissions/  - gga/   │
+└──────┬──────────────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────────────┐
+│         Verification & Reporting                │
+│  internal/verify/                               │
+│  - Check installed files                        │
+│  - Validate JSON/config syntax                  │
+│  - Report success/failure                       │
+└─────────────────────────────────────────────────┘
+```
+
+## Package Organization
+
+### Core Packages
+
+<CardGroup cols={2}>
+  <Card title="internal/app/" icon="gear">
+    **Command dispatch + runtime wiring**
+    
+    - `app.go` - Main entry point, TUI vs CLI routing
+    - Dependency injection setup
+  </Card>
+  
+  <Card title="internal/model/" icon="cube">
+    **Domain types**
+    
+    - `types.go` - AgentID, ComponentID, SkillID, PersonaID
+    - `plan.go` - InstallPlan, Selection
+    - System prompt/MCP strategies
+  </Card>
+  
+  <Card title="internal/agents/" icon="robot">
+    **Agent adapters**
+    
+    - `interface.go` - Adapter interface definition
+    - `claude/`, `opencode/`, `gemini/`, `cursor/`, `vscode/`
+    - `registry.go` - Agent registry + factory
+  </Card>
+  
+  <Card title="internal/components/" icon="puzzle">
+    **Component installation**
+    
+    - Each component has its own package
+    - `engram/`, `sdd/`, `skills/`, `mcp/`, `persona/`, etc.
+    - `filemerge/` - Marker-based file merging
+  </Card>
+</CardGroup>
+
+### Supporting Packages
+
+<CardGroup cols={2}>
+  <Card title="internal/catalog/" icon="book">
+    **Registry definitions**
+    
+    - Component metadata
+    - Skill definitions
+    - Dependency declarations
+  </Card>
+  
+  <Card title="internal/system/" icon="server">
+    **Platform detection**
+    
+    - OS detection (darwin/linux/windows)
+    - Distro detection (ubuntu/arch/mint/manjaro)
+    - Dependency checks (git/npm/node/brew)
+  </Card>
+  
+  <Card title="internal/planner/" icon="network">
+    **Dependency resolution**
+    
+    - `graph.go` - Build dependency graph
+    - `resolver.go` - Resolve component order
+    - `order.go` - Topological sort
+  </Card>
+  
+  <Card title="internal/pipeline/" icon="flow">
+    **Execution orchestration**
+    
+    - `orchestrator.go` - Staged pipeline runner
+    - `stages.go` - Prepare/Apply/Rollback
+    - `rollback.go` - Restore from backup
+  </Card>
+</CardGroup>
+
+### Infrastructure
+
+<CardGroup cols={2}>
+  <Card title="internal/backup/" icon="floppy-disk">
+    **Config snapshots**
+    
+    - `snapshot.go` - Create backups
+    - `restore.go` - Restore from snapshots
+    - `manifest.go` - Backup metadata
+  </Card>
+  
+  <Card title="internal/assets/" icon="folder">
+    **Embedded resources**
+    
+    - Skill files (markdown)
+    - Persona templates
+    - MCP server configs
+  </Card>
+  
+  <Card title="internal/tui/" icon="window">
+    **Interactive UI**
+    
+    - Bubbletea TUI implementation
+    - `screens/` - Agent selection, component picker
+    - `styles/` - Rose Pine theme
+  </Card>
+  
+  <Card title="internal/cli/" icon="terminal">
+    **CLI mode**
+    
+    - Flag parsing
+    - Validation
+    - Dry-run orchestration
+  </Card>
+</CardGroup>
+
+## Design Patterns
+
+### 1. Adapter Pattern (Agents)
+
+Every agent implements the `Adapter` interface:
+
+```go
+type Adapter interface {
+    // Identity
+    Agent() model.AgentID
+    Tier() model.SupportTier
+
+    // Detection
+    Detect(ctx context.Context, homeDir string) (
+        installed bool, binaryPath string, 
+        configPath string, configFound bool, err error)
+
+    // Config paths
+    GlobalConfigDir(homeDir string) string
+    SkillsDir(homeDir string) string
+    SystemPromptFile(homeDir string) string
+    SettingsPath(homeDir string) string
+
+    // Config strategies
+    SystemPromptStrategy() model.SystemPromptStrategy
+    MCPStrategy() model.MCPStrategy
+
+    // Feature support
+    SupportsSkills() bool
+    SupportsSystemPrompt() bool
+    SupportsMCP() bool
+    SupportsOutputStyles() bool
+    SupportsSlashCommands() bool
+}
+```
+
+**Example: Claude Code Adapter**
+
+```go
+type ClaudeAdapter struct{}
+
+func (a ClaudeAdapter) SkillsDir(homeDir string) string {
+    return filepath.Join(homeDir, ".claude", "skills")
+}
+
+func (a ClaudeAdapter) SystemPromptStrategy() model.SystemPromptStrategy {
+    return model.StrategyMarkdownSections // Use markers
+}
+```
+
+**Why This Matters**
+
+Components use adapters without knowing which agent:
+
+```go
+// Component code is agent-agnostic
+func (i *SkillsInstaller) Install(
+    ctx context.Context, 
+    adapter agents.Adapter,
+) error {
+    skillsDir := adapter.SkillsDir(homeDir)
+    // Write skills to adapter-provided path
+}
+```
+
+Adding a new agent? Just implement `Adapter` - no component changes needed.
+
+### 2. Dependency Graph (Components)
+
+Components declare dependencies:
+
+```go
+// internal/catalog/dependencies.go
+var Dependencies = map[model.ComponentID][]model.ComponentID{
+    model.ComponentSDD: {
+        model.ComponentEngram,  // SDD needs Engram
+        model.ComponentSkills,  // SDD needs Skills
+    },
+    model.ComponentPersona: {
+        model.ComponentEngram,  // Persona references Engram
+    },
+}
+```
+
+The planner topologically sorts components:
+
+```go
+// internal/planner/order.go
+func TopologicalSort(graph DependencyGraph) ([]model.ComponentID, error) {
+    // Returns: [engram, skills, context7, sdd, persona, ...]
+}
+```
+
+Result: components install in the correct order automatically.
+
+### 3. Staged Pipeline (Execution)
+
+Execution flows through stages:
+
+```go
+type StagePlan struct {
+    Prepare []Step  // Validation, detection
+    Apply   []Step  // Install, write files
+}
+
+type Step interface {
+    ID() string
+    Execute(ctx context.Context) error
+    Rollback(ctx context.Context) error  // Undo this step
+}
+```
+
+**Stage 1: PREPARE**
+- Detect agents (binary + config paths)
+- Validate dependencies (git, npm, node)
+- Check disk space, permissions
+- **No side effects** - safe to run repeatedly
+
+**Stage 2: APPLY**
+- Create backups of existing configs
+- Install components in dependency order
+- Write skills, inject system prompts, configure MCP
+- **Side effects** - modifies filesystem
+
+**Stage 3: ROLLBACK** (on failure)
+- Restore files from backup manifest
+- Clean up partial writes
+- Report what was rolled back
+
+### 4. Marker-Based File Merging
+
+Inject content without clobbering user edits:
+
+```markdown
+<!-- User's existing content -->
+My custom instructions...
+
+<!-- gentle-ai:persona-start -->
+You are the Gentleman AI persona...
+<!-- gentle-ai:persona-end -->
+
+<!-- More user content -->
+```
+
+**Implementation** (internal/components/filemerge/):
+
+```go
+func InjectSection(filePath, markerID, content string) error {
+    existing := readFile(filePath)
+    
+    // Replace content between markers
+    updated := replaceMarkerSection(existing, markerID, content)
+    
+    writeFile(filePath, updated)
+}
+```
+
+**Benefits**:
+- Preserves user customizations
+- Idempotent updates (re-run safely)
+- Clean uninstall (remove markers + content)
+
+## Component Architecture
+
+### Component Interface
+
+Each component implements:
+
+```go
+type Component interface {
+    ID() model.ComponentID
+    Install(ctx context.Context, adapter agents.Adapter) error
+    Verify(ctx context.Context, adapter agents.Adapter) error
+}
+```
+
+### Example: Skills Component
+
+```go
+// internal/components/skills/installer.go
+type Installer struct {
+    assets  assets.SkillProvider
+    logger  Logger
+}
+
+func (i *Installer) Install(
+    ctx context.Context,
+    adapter agents.Adapter,
+) error {
+    // 1. Get skills directory from adapter
+    skillsDir := adapter.SkillsDir(homeDir)
+    
+    // 2. Create directory
+    os.MkdirAll(skillsDir, 0755)
+    
+    // 3. Write skill files
+    for _, skillID := range selection.Skills {
+        content := i.assets.GetSkill(skillID)
+        filePath := filepath.Join(skillsDir, skillID + ".md")
+        os.WriteFile(filePath, content, 0644)
+    }
+    
+    // 4. Handle agent-specific formats
+    if adapter.SupportsSlashCommands() {
+        // OpenCode: also write slash commands
+        i.writeSlashCommands(adapter)
+    }
+    
+    return nil
+}
+```
+
+## Data Flow
+
+### 1. User Input → Selection
+
+```
+TUI/CLI → internal/cli/validation.go → model.Selection
+
+Selection {
+    Agents:     [claude-code, opencode]
+    Preset:     full-gentleman
+    Components: [engram, sdd, skills, ...]
+    Skills:     [go-testing, skill-creator]
+    Persona:    gentleman
+}
+```
+
+### 2. Selection → Plan
+
+```
+model.Selection → internal/planner/ → model.InstallPlan
+
+InstallPlan {
+    Agents: [AgentInfo...]
+    Components: [engram, skills, sdd, ...]  // Sorted
+    Skills: [go-testing, skill-creator]
+    Platform: PlatformProfile
+    DryRun: false
+}
+```
+
+### 3. Plan → Execution
+
+```
+InstallPlan → internal/pipeline/ → ExecutionResult
+
+Stages:
+  1. PREPARE: Validate, detect agents
+  2. APPLY: Install components
+  3. ROLLBACK: Restore on failure
+
+Result {
+    Success: true
+    ComponentsInstalled: [engram, skills, sdd]
+    Backup: Manifest{...}
+}
+```
+
+## Key Interfaces
+
+### Adapter (Agent Integration)
+
+See `internal/agents/interface.go`
+
+- **Purpose**: Abstract agent differences
+- **Used by**: All components
+- **Implementations**: claude/, opencode/, gemini/, cursor/, vscode/
+
+### Component (Installation)
+
+See component packages under `internal/components/`
+
+- **Purpose**: Install/configure a single component
+- **Used by**: Pipeline orchestrator
+- **Implementations**: engram/, sdd/, skills/, mcp/, persona/, etc.
+
+### Step (Pipeline)
+
+See `internal/pipeline/stages.go`
+
+- **Purpose**: Atomic unit of work with rollback support
+- **Used by**: Orchestrator
+- **Examples**: DetectAgentStep, InstallComponentStep, BackupStep
+
+## Configuration Strategies
+
+### System Prompt Strategies
+
+<CardGroup cols={3}>
+  <Card title="Markdown Sections" icon="marker">
+    **Claude Code**
+    
+    Inject using `<!-- gentle-ai:ID -->` markers in CLAUDE.md
+  </Card>
+  
+  <Card title="File Replace" icon="file">
+    **OpenCode**
+    
+    Replace entire AGENTS.md file
+  </Card>
+  
+  <Card title="Append" icon="plus">
+    **Gemini CLI**
+    
+    Append to existing system prompt
+  </Card>
+</CardGroup>
+
+### MCP Strategies
+
+<CardGroup cols={3}>
+  <Card title="Separate Files" icon="folder-open">
+    **Claude Code**
+    
+    One JSON file per server:
+    `~/.claude/mcp/context7.json`
+  </Card>
+  
+  <Card title="Merge Settings" icon="merge">
+    **OpenCode, Gemini CLI**
+    
+    Add `mcpServers` to settings.json
+  </Card>
+  
+  <Card title="Config File" icon="file-code">
+    **Cursor**
+    
+    Dedicated `~/.cursor/mcp.json`
+  </Card>
+</CardGroup>
+
+## Testing Architecture
+
+See [Testing Guide](/development/testing) for details.
+
+## Performance Considerations
+
+### Parallel Detection
+
+Agents are detected in parallel:
+
+```go
+for _, agentID := range selection.Agents {
+    go func(id model.AgentID) {
+        adapter := agents.NewAdapter(id)
+        info := adapter.Detect(ctx, homeDir)
+        results <- info
+    }(agentID)
+}
+```
+
+### Lazy Asset Loading
+
+Skills are embedded but loaded on-demand:
+
+```go
+//go:embed skills/*.md
+var skillsFS embed.FS
+
+func GetSkill(id SkillID) []byte {
+    return skillsFS.ReadFile(fmt.Sprintf("skills/%s.md", id))
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Testing Guide" href="/development/testing" icon="vial">
+    Learn testing strategies and write tests
+  </Card>
+  <Card title="Build Guide" href="/development/building" icon="hammer">
+    Build binaries and create releases
+  </Card>
+</CardGroup>

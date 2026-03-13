@@ -1,0 +1,356 @@
+---
+title: "VS Code Copilot"
+description: "GitHub Copilot in VS Code with instructions, global skills, and parallel sub-agents"
+---
+
+VS Code Copilot (GitHub Copilot in Visual Studio Code) receives full Gentle AI ecosystem support, including skills, MCP servers, parallel sub-agents, and instructions-based system prompts.
+
+## Support Tier
+
+**Full** — VS Code Copilot receives the complete SDD orchestrator, skill files, MCP integration, system prompt injection, and sub-agent delegation.
+
+## Configuration Paths
+
+### Primary Config Directories
+
+VS Code Copilot uses **two** primary config locations:
+
+1. **VS Code User Directory** — System prompt, settings, MCP config
+2. **~/.copilot/** — Global skills directory
+
+### File Locations
+
+| Purpose | Path |
+|---------|------|
+| System Prompt | `Code/User/prompts/gentle-ai.instructions.md` |
+| Skills Directory | `~/.copilot/skills/` |
+| Settings File | `Code/User/settings.json` |
+| MCP Config | `Code/User/mcp.json` |
+
+### Platform-Specific Paths
+
+<Tabs>
+  <Tab title="macOS">
+    ```bash
+    # System prompt
+    ~/Library/Application Support/Code/User/prompts/gentle-ai.instructions.md
+    
+    # Skills
+    ~/.copilot/skills/
+    
+    # Settings & MCP
+    ~/Library/Application Support/Code/User/settings.json
+    ~/Library/Application Support/Code/User/mcp.json
+    ```
+  </Tab>
+  
+  <Tab title="Linux">
+    ```bash
+    # System prompt
+    ~/.config/Code/User/prompts/gentle-ai.instructions.md
+    
+    # Skills
+    ~/.copilot/skills/
+    
+    # Settings & MCP
+    ~/.config/Code/User/settings.json
+    ~/.config/Code/User/mcp.json
+    ```
+  </Tab>
+  
+  <Tab title="Windows">
+    ```powershell
+    # System prompt
+    %APPDATA%\Code\User\prompts\gentle-ai.instructions.md
+    
+    # Skills
+    %USERPROFILE%\.copilot\skills\
+    
+    # Settings & MCP
+    %APPDATA%\Code\User\settings.json
+    %APPDATA%\Code\User\mcp.json
+    ```
+  </Tab>
+</Tabs>
+
+## Configuration Strategies
+
+### System Prompt: Instructions File
+
+VS Code Copilot uses the **instructions file** strategy. Gentle AI creates `gentle-ai.instructions.md` in the VS Code User prompts directory.
+
+**Path:** `Code/User/prompts/gentle-ai.instructions.md`
+
+<Info>
+VS Code Copilot reads `.instructions.md` files from the User prompts folder. You can add multiple instructions files.
+</Info>
+
+### MCP: Dedicated Config File
+
+VS Code Copilot uses a dedicated `mcp.json` configuration file in the VS Code User directory.
+
+**Example: Code/User/mcp.json**
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@context-labs/mcp-server-context7"],
+      "env": {
+        "CONTEXT7_API_KEY": "your-api-key"
+      }
+    },
+    "engram": {
+      "command": "npx",
+      "args": ["-y", "@gentleman-programming/mcp-server-engram"],
+      "env": {}
+    }
+  }
+}
+```
+
+## Capabilities
+
+### Skills ✅
+
+Skills are written to `~/.copilot/skills/` as markdown files:
+
+```bash
+~/.copilot/skills/
+├── sdd-init.md
+├── sdd-explore.md
+├── sdd-propose.md
+├── sdd-spec.md
+├── sdd-design.md
+├── sdd-tasks.md
+├── sdd-apply.md
+├── sdd-verify.md
+├── sdd-archive.md
+├── go-testing.md
+└── skill-creator.md
+```
+
+<Info>
+VS Code Copilot loads skills from multiple locations:
+- `~/.copilot/skills/` (global)
+- `.github/skills/` (workspace)
+- `~/.claude/skills/` (Claude Code fallback)
+- `.claude/skills/` (workspace fallback)
+
+Gentle AI targets `~/.copilot/skills/` for global reach.
+</Info>
+
+### MCP Servers ✅
+
+MCP servers are configured in `Code/User/mcp.json`. Gentle AI configures:
+
+- **Context7** — Live framework/library documentation
+- **Engram** — Persistent cross-session memory
+
+### Sub-agents ✅ Parallel Execution
+
+VS Code Copilot supports the `runSubagent` tool with:
+- Parallel execution
+- Custom agent definitions
+- Task delegation
+
+<Info>
+VS Code Copilot's sub-agent support enables the full SDD orchestration workflow with parallel task execution.
+</Info>
+
+### Slash Commands ❌
+
+VS Code Copilot does not support custom slash commands. Use OpenCode if you need slash command support.
+
+### Output Styles ❌
+
+VS Code Copilot does not support custom output styles. Use Claude Code if you need output style support.
+
+## Installation
+
+### Auto-Install Support ❌
+
+VS Code is a **desktop application** and must be installed manually.
+
+**Detection Method:** Checks for `code` binary on PATH.
+
+<Warning>
+Gentle AI cannot automatically install VS Code. Download and install VS Code from [code.visualstudio.com](https://code.visualstudio.com) and the GitHub Copilot extension before running Gentle AI.
+</Warning>
+
+### Manual Installation
+
+<Tabs>
+  <Tab title="macOS">
+    ```bash
+    # Download from code.visualstudio.com or use Homebrew
+    brew install --cask visual-studio-code
+    
+    # Install GitHub Copilot extension
+    code --install-extension GitHub.copilot
+    ```
+  </Tab>
+  
+  <Tab title="Linux">
+    ```bash
+    # Debian/Ubuntu
+    sudo apt install code
+    
+    # Arch
+    yay -S visual-studio-code-bin
+    
+    # Install GitHub Copilot extension
+    code --install-extension GitHub.copilot
+    ```
+  </Tab>
+  
+  <Tab title="Windows">
+    ```powershell
+    # Download installer from code.visualstudio.com
+    # Or use winget
+    winget install Microsoft.VisualStudioCode
+    
+    # Install GitHub Copilot extension
+    code --install-extension GitHub.copilot
+    ```
+  </Tab>
+</Tabs>
+
+## Example Configuration
+
+### Full Gentleman Preset
+
+```bash
+gentle-ai install \
+  --agent vscode-copilot \
+  --preset full-gentleman
+```
+
+This installs:
+- ✅ All SDD skills (9 files)
+- ✅ Foundation skills (go-testing, skill-creator)
+- ✅ Context7 + Engram MCP servers
+- ✅ Gentleman persona
+- ✅ Permissions + security defaults
+- ✅ GGA integration (optional)
+
+### Ecosystem Only
+
+```bash
+gentle-ai install \
+  --agent vscode-copilot \
+  --preset ecosystem-only
+```
+
+This installs:
+- ✅ P0 skills only (critical SDD workflow)
+- ✅ Context7 + Engram MCP servers
+- ✅ Gentleman persona
+- ✅ Permissions + security defaults
+
+### Multiple Instructions Files
+
+Keep custom instructions separate from Gentle AI:
+
+```bash
+Code/User/prompts/
+├── gentle-ai.instructions.md   # Managed by Gentle AI
+└── custom.instructions.md      # Your custom instructions
+```
+
+VS Code Copilot will load all `.instructions.md` files in the prompts directory.
+
+## Implementation Details
+
+**Source Code:** `internal/agents/vscode/adapter.go`
+
+**Agent ID:** `vscode-copilot`
+
+**Support Tier:** `TierFull`
+
+**System Prompt Strategy:** `StrategyInstructionsFile`
+
+**MCP Strategy:** `StrategyMCPConfigFile`
+
+## Platform-Specific User Directory
+
+VS Code's User directory varies by platform:
+
+```go
+// internal/agents/vscode/adapter.go:98-115
+func (a *Adapter) vscodeUserDir(homeDir string) string {
+    switch runtime.GOOS {
+    case "darwin":
+        return filepath.Join(homeDir, "Library", "Application Support", "Code", "User")
+    case "windows":
+        appData := os.Getenv("APPDATA")
+        if appData == "" {
+            appData = filepath.Join(homeDir, "AppData", "Roaming")
+        }
+        return filepath.Join(appData, "Code", "User")
+    default:
+        xdgConfigHome := os.Getenv("XDG_CONFIG_HOME")
+        if xdgConfigHome == "" {
+            xdgConfigHome = filepath.Join(homeDir, ".config")
+        }
+        return filepath.Join(xdgConfigHome, "Code", "User")
+    }
+}
+```
+
+<Info>
+Gentle AI automatically detects the correct VS Code User directory based on your platform and environment variables.
+</Info>
+
+## Desktop App Considerations
+
+### Binary Detection
+
+VS Code is detected by its `code` binary on PATH:
+
+```go
+// internal/agents/vscode/adapter.go:36-44
+func (a *Adapter) Detect(_ context.Context, _ string) (bool, string, string, bool, error) {
+    // VS Code is detected by its binary on PATH.
+    binaryPath, err := a.lookPath("code")
+    if err != nil {
+        return false, "", "", false, nil
+    }
+
+    return true, binaryPath, "", true, nil
+}
+```
+
+### Cannot Auto-Install
+
+```go
+// internal/agents/vscode/adapter.go:47-54
+func (a *Adapter) SupportsAutoInstall() bool {
+    return false // VS Code is a desktop app installed via package managers.
+}
+
+func (a *Adapter) InstallCommand(_ system.PlatformProfile) ([][]string, error) {
+    return nil, AgentNotInstallableError{Agent: model.AgentVSCodeCopilot}
+}
+```
+
+<Info>
+Gentle AI will prompt you to install VS Code manually if it's not detected.
+</Info>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation Guide" icon="download" href="/installation">
+    Install Gentle AI and configure VS Code Copilot
+  </Card>
+  <Card title="Components" icon="cube" href="/components/engram">
+    Learn about the Gentle AI component ecosystem
+  </Card>
+  <Card title="Skills" icon="brain" href="/components/skills">
+    Explore SDD and foundation skills
+  </Card>
+  <Card title="MCP Servers" icon="plug" href="/components/context7">
+    Configure Context7 and Engram
+  </Card>
+</CardGroup>

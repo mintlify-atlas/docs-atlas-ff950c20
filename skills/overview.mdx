@@ -1,0 +1,365 @@
+---
+title: Skills Library Overview
+description: Understanding the curated skill library and SDD workflow
+---
+
+# Skills Library Overview
+
+The Gentle AI skills library provides specialized instructions for AI agents to follow project-specific patterns, implement structured workflows, and make consistent decisions.
+
+## What are Skills?
+
+Skills are **structured markdown files** that teach AI agents:
+- **When to use** specific patterns or workflows
+- **Critical rules** that must be followed
+- **Code examples** demonstrating correct approaches
+- **Decision trees** for choosing between alternatives
+- **Commands** for common operations
+
+Think of skills as **just-in-time documentation** that agents load when they recognize a matching task.
+
+## Skill Categories
+
+Gentle AI organizes skills into categories:
+
+### 1. SDD Workflow Skills (9 skills)
+
+Implement Spec-Driven Development phases:
+
+<CardGroup cols={3}>
+  <Card title="sdd-init" icon="rocket" href="/skills/sdd-workflow#sdd-init">
+    Initialize SDD context in any project
+  </Card>
+  <Card title="sdd-explore" icon="magnifying-glass" href="/skills/sdd-workflow#sdd-explore">
+    Explore problem space and recommend approach
+  </Card>
+  <Card title="sdd-propose" icon="file-pen" href="/skills/sdd-workflow#sdd-propose">
+    Create structured change proposals
+  </Card>
+  <Card title="sdd-spec" icon="list-check" href="/skills/sdd-workflow#sdd-spec">
+    Write behavioral specifications
+  </Card>
+  <Card title="sdd-design" icon="diagram-project" href="/skills/sdd-workflow#sdd-design">
+    Make architectural decisions
+  </Card>
+  <Card title="sdd-tasks" icon="tasks" href="/skills/sdd-workflow#sdd-tasks">
+    Break work into implementable tasks
+  </Card>
+  <Card title="sdd-apply" icon="code" href="/skills/sdd-workflow#sdd-apply">
+    Implement code following specs
+  </Card>
+  <Card title="sdd-verify" icon="check-circle" href="/skills/sdd-workflow#sdd-verify">
+    Verify implementation matches specs
+  </Card>
+  <Card title="sdd-archive" icon="box-archive" href="/skills/sdd-workflow#sdd-archive">
+    Archive completed changes
+  </Card>
+</CardGroup>
+
+### 2. Foundation Skills (2 skills)
+
+Core patterns for Gentleman.Dots project:
+
+<CardGroup cols={2}>
+  <Card title="go-testing" icon="vial" href="/skills/foundation#go-testing">
+    Go testing patterns: table-driven tests, TUI testing, golden files
+  </Card>
+  <Card title="skill-creator" icon="wand-magic-sparkles" href="/skills/creating-skills">
+    Create new skills following Agent Skills spec
+  </Card>
+</CardGroup>
+
+### 3. Shared Conventions (3 files)
+
+Not skills themselves, but referenced by SDD skills:
+
+- **`persistence-contract.md`**: Mode resolution rules (`engram`/`openspec`/`hybrid`/`none`)
+- **`engram-convention.md`**: Engram naming patterns and topic keys
+- **`openspec-convention.md`**: Filesystem directory structure
+
+These files define contracts that all SDD skills follow.
+
+## Skill File Structure
+
+### Anatomy of a Skill
+
+```markdown
+---
+name: go-testing
+description: >
+  Go testing patterns for Gentleman.Dots, including Bubbletea TUI testing.
+  Trigger: When writing Go tests, using teatest, or adding test coverage.
+license: Apache-2.0
+metadata:
+  author: gentleman-programming
+  version: "1.0"
+---
+
+## When to Use
+
+{Bullet points of trigger conditions}
+
+## Critical Patterns
+
+{The most important rules - what AI MUST know}
+
+## Decision Tree
+
+{Tables or flowcharts for choosing approaches}
+
+## Code Examples
+
+{Minimal, focused code samples}
+
+## Commands
+
+```bash
+{Copy-paste terminal commands}
+```
+
+## Resources
+
+- **Templates**: See `assets/` for templates
+- **Documentation**: See `references/` for local docs
+```
+
+### Frontmatter Fields
+
+| Field | Required | Purpose |
+|-------|----------|----------|
+| `name` | Yes | Lowercase identifier with hyphens |
+| `description` | Yes | What the skill does + trigger keywords |
+| `license` | Yes | Always `Apache-2.0` or `MIT` |
+| `metadata.author` | Yes | Typically `gentleman-programming` |
+| `metadata.version` | Yes | Semantic version as string |
+| `allowed-tools` | Optional | Restrict which tools agents can use |
+
+**Key insight**: The `description` field includes **trigger keywords** that help agents decide when to load the skill.
+
+## Skill Discovery
+
+AI agents discover skills through multiple mechanisms:
+
+### 1. Frontmatter Search
+
+Agents scan skill directories and match `description` field against the current task:
+
+```markdown
+---
+description: >
+  Trigger: When writing Go tests, using teatest, or adding test coverage.
+---
+```
+
+If the task mentions "Go tests" or "teatest", the agent loads `go-testing/SKILL.md`.
+
+### 2. Skill Registry
+
+The **skill registry** is a catalog that sub-agents read as their **first step** before any work:
+
+```markdown
+# Skill Registry
+
+## User-Level Skills
+
+| Skill | Description | Path |
+|-------|-------------|------|
+| `pytest` | Python testing with pytest | `~/.config/opencode/skills/pytest/SKILL.md` |
+| `react-19` | React 19 patterns and hooks | `~/.config/opencode/skills/react-19/SKILL.md` |
+
+## Project-Level Skills
+
+| Skill | Description | Path |
+|-------|-------------|------|
+| `myapp-api` | MyApp API conventions | `./skills/myapp-api/SKILL.md` |
+| `myapp-test-sdk` | SDK testing patterns | `./skills/myapp-test-sdk/SKILL.md` |
+
+## Project Conventions
+
+| File | Path |
+|------|------|
+| `AGENTS.md` | `./AGENTS.md` |
+| `.cursorrules` | `./.cursorrules` |
+```
+
+Registry location:
+- **Engram**: `topic_key: "skill-registry"` (cross-session cache)
+- **Filesystem**: `.atl/skill-registry.md` (local fallback)
+
+See [Skill Registry](/components/skills#skill-registry) for generation details.
+
+### 3. Explicit References
+
+Skills can reference other skills:
+
+```markdown
+## Step 1: Load Testing Skill
+
+If writing tests, read `skills/go-testing/SKILL.md` for patterns.
+```
+
+## Sub-Agent Loading Protocol
+
+**EVERY sub-agent MUST load skills as the FIRST step**:
+
+```
+1. Try Engram first:
+   mem_search(query: "skill-registry", project: "{project}")
+   → if found: mem_get_observation(id) → full registry
+
+2. If Engram not available or not found:
+   read .atl/skill-registry.md
+
+3. If neither exists:
+   proceed without skills (not an error)
+
+4. From the registry, identify skills matching your task:
+   - Writing React code? → load react-19
+   - Reviewing a PR? → load pr-review
+   - Creating a Jira task? → load jira-task
+   - Writing tests? → load pytest/playwright
+
+5. Read those specific SKILL.md files
+
+6. Also read any project convention files listed in the registry
+
+7. THEN proceed with your actual task
+```
+
+This ensures agents have the right context before starting work.
+
+## Skill Locations
+
+### User-Level Skills
+
+Installed globally for your user account:
+
+| Agent | Path |
+|-------|------|
+| Claude Code | `~/.config/claude-code/skills/` |
+| OpenCode | `~/.config/opencode/skills/` |
+| Gemini CLI | `~/.gemini/skills/` |
+| Cursor | `~/.cursor/skills/` |
+| VS Code Copilot | `~/.copilot/skills/` |
+
+### Project-Level Skills
+
+Installed in the project directory:
+
+```
+project-root/
+├── .claude/skills/
+├── .gemini/skills/
+├── .agent/skills/
+└── skills/           # Generic, any agent
+```
+
+**Priority**: Project-level skills override user-level skills with the same name.
+
+## Skill Naming Conventions
+
+| Type | Pattern | Examples |
+|------|---------|----------|
+| Generic skill | `{technology}` | `pytest`, `playwright`, `typescript`, `tailwind` |
+| Project-specific | `{project}-{component}` | `myapp-api`, `myapp-ui`, `dotfiles-installer` |
+| Testing skill | `{project}-test-{component}` | `myapp-test-sdk`, `myapp-test-api` |
+| Workflow skill | `{action}-{target}` | `skill-creator`, `jira-task`, `pr-review` |
+
+Use **lowercase with hyphens**, never underscores or camelCase.
+
+## Creating Custom Skills
+
+See [Creating Skills](/skills/creating-skills) for detailed guide.
+
+**Quick start**:
+
+1. Use `skill-creator` skill to generate a template
+2. Fill in frontmatter with name, description, triggers
+3. Write critical patterns (the "must know" rules)
+4. Add decision trees for common choices
+5. Include minimal code examples
+6. Add terminal commands for copy-paste
+7. Register in project's `AGENTS.md`
+
+## When to Create a Skill
+
+### Good Candidates
+
+- **Repeated patterns**: You've explained the same thing 3+ times
+- **Project conventions**: Your team has specific rules
+- **Complex workflows**: Multi-step processes with decisions
+- **Framework-specific**: Using features not in AI training data
+- **Testing patterns**: Project has custom test helpers
+
+### Not a Good Fit
+
+- **One-off tasks**: Won't be repeated
+- **Well-documented**: Official docs already cover it
+- **Trivial**: Self-explanatory from code
+- **Constantly changing**: Pattern isn't stable yet
+
+## Skill Content Guidelines
+
+### DO
+
+- Start with the most critical patterns
+- Use tables for decision trees
+- Keep code examples minimal (10-20 lines max)
+- Include Commands section with copy-paste commands
+- Reference local documentation (not web URLs)
+- Use concrete examples, not abstract descriptions
+
+### DON'T
+
+- Add Keywords section (agents search frontmatter)
+- Duplicate content from existing docs
+- Include lengthy explanations (link to docs instead)
+- Add troubleshooting sections (keep focused)
+- Use web URLs in references (prefer local paths)
+- Make it a tutorial (it's a reference, not a guide)
+
+## FAQ
+
+<Accordion title="What's the difference between skills and system prompts?">
+  **System prompts** are always active—they define the agent's core personality and behavior.
+  
+  **Skills** are task-specific and loaded on-demand—they provide context for particular operations.
+  
+  This separation reduces token usage: agents only load relevant skills for the current task.
+</Accordion>
+
+<Accordion title="Can I edit installed skills?">
+  Yes! Skills are just markdown files. Edit them directly in your agent's skills directory to customize patterns for your workflow.
+</Accordion>
+
+<Accordion title="How do I know which skills are loaded?">
+  Check `.atl/skill-registry.md` in your project root, or query Engram:
+  ```
+  mem_search(query: "skill-registry", project: "yourproject")
+  ```
+</Accordion>
+
+<Accordion title="Why are SDD skills in the main library?">
+  SDD is the core workflow for Gentle AI. The 9 SDD skills implement the entire Spec-Driven Development process and are used by all agents that install the SDD component.
+</Accordion>
+
+<Accordion title="Can I share skills with my team?">
+  Absolutely! Put skills in `skills/` directory in your project root and commit to version control. Team members get the skills when they clone the repo.
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="SDD Workflow" icon="diagram-project" href="/skills/sdd-workflow">
+    Learn about the 9 SDD skills and how they implement Spec-Driven Development
+  </Card>
+  <Card title="Foundation Skills" icon="vial" href="/skills/foundation">
+    Explore go-testing and skill-creator patterns
+  </Card>
+  <Card title="Creating Skills" icon="wand-magic-sparkles" href="/skills/creating-skills">
+    Write your own custom skills following the Agent Skills spec
+  </Card>
+  <Card title="Skills Component" icon="book" href="/components/skills">
+    Technical details on skill installation and discovery
+  </Card>
+</CardGroup>

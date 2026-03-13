@@ -1,0 +1,413 @@
+---
+title: Architecture
+description: Understanding the Gentle AI codebase structure
+---
+
+## Project Structure
+
+Gentle AI is a Go CLI tool with a clean internal architecture:
+
+```
+cmd/gentle-ai/             CLI entrypoint
+internal/
+  app/                     Command dispatch + runtime wiring
+  model/                   Domain types (agents, components, skills, presets)
+  catalog/                 Registry definitions
+  system/                  OS/distro detection, dependency checks
+  cli/                     Install flags, validation, orchestration
+  planner/                 Dependency graph, resolution, ordering
+  installcmd/              Platform-aware command resolver
+  pipeline/                Staged execution + rollback orchestration
+  backup/                  Config snapshot + restore
+  assets/                  Embedded skill files + persona templates
+  components/              Per-component install/inject logic
+  agents/                  Agent adapters (config strategy per agent)
+  verify/                  Post-apply health checks + reporting
+  tui/                     Bubbletea TUI (Rose Pine theme)
+scripts/                   Installer scripts (bash + PowerShell)
+e2e/                       Docker-based E2E tests
+testdata/                  Golden test fixtures
+```
+
+## Core Layers
+
+### Command Layer (`cmd/` + `internal/app/`)
+
+The entry point that dispatches to commands:
+
+```go
+// cmd/gentle-ai/main.go
+package main
+
+import (
+    "github.com/gentleman-programming/gentle-ai/internal/app"
+)
+
+var version = "dev" // Set by GoReleaser
+
+func main() {
+    app.Version = version
+    if err := app.Run(); err != nil {
+        fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+        os.Exit(1)
+    }
+}
+```
+
+The `app` package routes to:
+- **No args** → TUI mode
+- `install` → CLI install mode
+- `update` → Update checker
+- `version` → Version printer
+
+### Model Layer (`internal/model/`)
+
+Domain types with no business logic:
+
+```go
+type AgentID string
+const (
+    AgentClaudeCode    AgentID = "claude-code"
+    AgentOpenCode      AgentID = "opencode"
+    AgentGeminiCLI     AgentID = "gemini-cli"
+    AgentCursor        AgentID = "cursor"
+    AgentVSCodeCopilot AgentID = "vscode-copilot"
+)
+
+type ComponentID string
+const (
+    ComponentEngram     ComponentID = "engram"
+    ComponentSDD        ComponentID = "sdd"
+    ComponentSkills     ComponentID = "skills"
+    ComponentContext7   ComponentID = "context7"
+    ComponentPersona    ComponentID = "persona"
+    ComponentPermission ComponentID = "permissions"
+    ComponentGGA        ComponentID = "gga"
+    ComponentTheme      ComponentID = "theme"
+)
+
+type PresetID string
+const (
+    PresetFullGentleman PresetID = "full-gentleman"
+    PresetEcosystemOnly PresetID = "ecosystem-only"
+    PresetMinimal       PresetID = "minimal"
+    PresetCustom        PresetID = "custom"
+)
+```
+
+### Catalog Layer (`internal/catalog/`)
+
+Static registries of available agents, components, and skills:
+
+```go
+// internal/catalog/agents.go
+var allAgents = []Agent{
+    {ID: model.AgentClaudeCode, Name: "Claude Code", Tier: model.TierFull},
+    {ID: model.AgentOpenCode, Name: "OpenCode", Tier: model.TierFull},
+    {ID: model.AgentGeminiCLI, Name: "Gemini CLI", Tier: model.TierFull},
+    {ID: model.AgentCursor, Name: "Cursor", Tier: model.TierFull},
+    {ID: model.AgentVSCodeCopilot, Name: "VS Code Copilot", Tier: model.TierFull},
+}
+```
+
+All agents are `TierFull` — they receive the complete SDD orchestrator, skills, MCP config, and sub-agent delegation.
+
+### System Layer (`internal/system/`)
+
+OS and dependency detection:
+
+<CodeGroup>
+
+```go Detection
+// internal/system/detect.go
+func Detect(ctx context.Context) (DetectionResult, error) {
+    homeDir, _ := os.UserHomeDir()
+    tools := DetectTools(ctx, []string{"git", "curl", "brew", "node"})
+    configs := ScanConfigs(homeDir)
+    
+    profile := resolvePlatformProfile(runtime.GOOS, osRelease, tools)
+    dependencies := DetectDependencies(ctx, profile)
+    
+    return DetectionResult{
+        System:       SystemInfo{OS: runtime.GOOS, Profile: profile},
+        Tools:        tools,
+        Configs:      configs,
+        Dependencies: dependencies,
+    }, nil
+}
+```
+
+```go Platform Profiles
+// Platform-specific package managers
+type PlatformProfile struct {
+    OS             string
+    LinuxDistro    string  // ubuntu, debian, arch
+    PackageManager string  // brew, apt, pacman, winget
+    NpmWritable    bool    // true if npm prefix is user-writable
+}
+```
+
+</CodeGroup>
+
+### CLI Layer (`internal/cli/`)
+
+Flag parsing and validation:
+
+```go
+type InstallFlags struct {
+    Agents     []string
+    Components []string
+    Skills     []string
+    Persona    string
+    Preset     string
+    DryRun     bool
+}
+
+func ParseInstallFlags(args []string) (InstallFlags, error)
+```
+
+Supports both singular and plural flag names:
+- `--agent` / `--agents`
+- `--component` / `--components`
+- `--skill` / `--skills`
+
+### Planner Layer (`internal/planner/`)
+
+Dependency resolution and ordering:
+
+<Steps>
+  <Step title="Build Dependency Graph">
+    Each component declares its dependencies:
+    
+    ```go
+    graph := map[ComponentID][]ComponentID{
+        ComponentSDD:     {ComponentEngram},
+        ComponentSkills:  {ComponentSDD},
+        ComponentContext7: {},
+        ComponentPersona: {},
+        ComponentGGA:     {},
+    }
+    ```
+  </Step>
+  
+  <Step title="Resolve Selection">
+    Given user selection, resolve transitive dependencies:
+    
+    - User selects: `[skills, context7]`
+    - Planner resolves: `[engram, sdd, skills, context7]`
+    - Ordered: `[engram, sdd, skills, context7]`
+  </Step>
+  
+  <Step title="Generate Review">
+    Build human-readable review payload:
+    
+    ```go
+    type ReviewPayload struct {
+        Agents           []AgentSummary
+        Components       []ComponentWithDeps
+        MissingDeps      []Dependency
+        InstallCommands  []string
+    }
+    ```
+  </Step>
+</Steps>
+
+### Pipeline Layer (`internal/pipeline/`)
+
+Staged execution with rollback:
+
+```go
+type StagePlan struct {
+    Prepare []Step  // Dependency checks, backup
+    Apply   []Step  // Agent config, component injection
+}
+
+type Orchestrator struct {
+    rollbackPolicy RollbackPolicy
+    failurePolicy  FailurePolicy
+    progressFunc   ProgressFunc
+}
+
+func (o *Orchestrator) Execute(plan StagePlan) ExecutionResult
+```
+
+**Execution flow**:
+1. **Prepare stage**: Check dependencies, create backup
+2. **Apply stage**: Configure agents, inject components
+3. **Rollback** (on failure): Restore from backup
+
+### Component Layer (`internal/components/`)
+
+Per-component install logic:
+
+```
+components/
+  engram/       Inject engram protocol
+  sdd/          Inject SDD orchestrator
+  skills/       Copy skill files
+  mcp/          Configure Context7
+  persona/      Inject persona instructions
+  permissions/  Set security guardrails
+  gga/          Install GGA binary
+  theme/        Apply theme overlay
+  filemerge/    Marker-based file merging
+```
+
+Each component exports an `Install` function:
+
+```go
+func Install(ctx context.Context, agent AgentAdapter, config Config) error
+```
+
+### Agent Layer (`internal/agents/`)
+
+Agent-specific adapters:
+
+```
+agents/
+  claude/       Claude Code adapter
+  opencode/     OpenCode adapter
+  gemini/       Gemini CLI adapter
+  cursor/       Cursor adapter
+  vscode/       VS Code Copilot adapter
+```
+
+Each adapter implements:
+
+```go
+type AgentAdapter interface {
+    SystemPromptStrategy() SystemPromptStrategy
+    MCPStrategy() MCPStrategy
+    SkillsDir() string
+    SystemPromptPath() string
+    MCPConfigPath() string
+}
+```
+
+### TUI Layer (`internal/tui/`)
+
+Bubbletea interactive interface:
+
+```
+tui/
+  model.go          Main TUI state machine
+  progress.go       Progress tracking
+  screens/
+    welcome.go      Welcome screen
+    detection.go    System detection
+    agents.go       Agent selection
+    persona.go      Persona selection
+    preset.go       Preset selection
+    deps.go         Dependency tree
+    review.go       Installation review
+    installing.go   Progress display
+    complete.go     Completion summary
+    backups.go      Backup management
+  styles/
+    colors.go       Rose Pine theme
+```
+
+## Data Flow
+
+<Steps>
+  <Step title="User Input">
+    TUI or CLI flags capture:
+    - Selected agents
+    - Chosen preset/components
+    - Persona mode
+  </Step>
+  
+  <Step title="Detection">
+    System layer scans:
+    - OS and architecture (source: `/internal/system/detect.go:34`)
+    - Package managers
+    - Existing agent configs
+    - Dependencies
+  </Step>
+  
+  <Step title="Planning">
+    Planner resolves:
+    - Transitive dependencies (source: `/internal/planner/resolver.go`)
+    - Install order
+    - Review payload
+  </Step>
+  
+  <Step title="Execution">
+    Pipeline orchestrates:
+    - Backup creation (source: `/internal/backup/`)
+    - Dependency installation
+    - Agent configuration
+    - Component injection
+  </Step>
+  
+  <Step title="Verification">
+    Verify layer checks:
+    - File existence
+    - JSON validity
+    - Executable permissions
+  </Step>
+</Steps>
+
+## Testing Architecture
+
+Gentle AI has comprehensive test coverage:
+
+- **26 test packages** across the codebase
+- **260+ test functions** covering all layers
+- **78 E2E tests** running in Docker (Ubuntu + Arch)
+- **17 golden files** for snapshot testing
+
+### Test Organization
+
+```
+internal/
+  system/
+    detect_test.go       Unit tests for OS detection
+  agents/
+    claude/
+      adapter_test.go    Claude adapter tests
+  components/
+    engram/
+      engram_test.go     Engram component tests
+  pipeline/
+    orchestrator_test.go Pipeline execution tests
+e2e/
+  docker-test.sh         Docker E2E runner
+  ubuntu/                Ubuntu container tests
+  arch/                  Arch Linux container tests
+testdata/
+  golden/                Expected output snapshots
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Components"
+    icon="puzzle-piece"
+    href="/concepts/components"
+  >
+    Deep dive into each ecosystem component
+  </Card>
+  <Card
+    title="Agents"
+    icon="robot"
+    href="/concepts/agents"
+  >
+    Agent support tiers and strategies
+  </Card>
+  <Card
+    title="Skills Guide"
+    icon="book"
+    href="/guides/skills"
+  >
+    Understanding the SDD workflow
+  </Card>
+  <Card
+    title="Development"
+    icon="code"
+    href="/development"
+  >
+    Contributing to Gentle AI
+  </Card>
+</CardGroup>

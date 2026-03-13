@@ -1,0 +1,348 @@
+---
+title: Skills
+description: Curated coding skill library for AI agents
+---
+
+# Skills
+
+The Skills component installs a curated library of coding skills that teach AI agents project-specific patterns, workflows, and best practices. Skills are markdown files that provide context-aware instructions.
+
+## What are Skills?
+
+Skills are structured markdown files (typically `SKILL.md`) that contain:
+- **Frontmatter**: Name, description, trigger keywords, metadata
+- **Patterns**: Critical rules and decision trees
+- **Examples**: Minimal, focused code samples
+- **Commands**: Copy-paste terminal commands
+- **Resources**: Links to local docs and templates
+
+Think of skills as "just-in-time documentation" that AI agents load when they match a task.
+
+## How It Works
+
+### Installation
+
+The skills component uses a generic installer that works across all agents:
+
+```go
+func Inject(
+    homeDir string,
+    adapter agents.Adapter,
+    skillIDs []model.SkillID
+) (InjectionResult, error)
+```
+
+For each skill:
+1. Read embedded asset from `internal/assets/skills/{skill-id}/SKILL.md`
+2. Write to agent's skills directory at `{skillDir}/{skill-id}/SKILL.md`
+3. Report success, failure, or skip
+
+Source: `internal/components/skills/inject.go:28-65`
+
+### Skills Directory by Agent
+
+| Agent | Skills Directory |
+|-------|------------------|
+| Claude Code | `~/.config/claude-code/skills/` |
+| OpenCode | `~/.config/opencode/skills/` |
+| Gemini CLI | `~/.gemini/skills/` |
+| Cursor | `~/.cursor/skills/` |
+| VS Code Copilot | `~/.copilot/skills/` |
+
+### Skill Discovery
+
+AI agents discover skills through:
+1. **Frontmatter search**: Agents scan `description` field for trigger keywords
+2. **Skill registry**: Catalog of all available skills (see [Skill Registry](#skill-registry) below)
+3. **Project conventions**: `AGENTS.md` table lists skills with descriptions
+
+## Skill File Structure
+
+### Directory Layout
+
+```
+skills/{skill-name}/
+├── SKILL.md              # Required - main skill file
+├── assets/               # Optional - templates, schemas, examples
+│   ├── template.py
+│   └── schema.json
+└── references/           # Optional - links to local docs
+    └── docs.md           # Points to docs/developer-guide/*.mdx
+```
+
+Source: `internal/assets/skills/skill-creator/SKILL.md:30-38`
+
+### Frontmatter Format
+
+```markdown
+---
+name: go-testing
+description: >
+  Go testing patterns for Gentleman.Dots, including Bubbletea TUI testing.
+  Trigger: When writing Go tests, using teatest, or adding test coverage.
+license: Apache-2.0
+metadata:
+  author: gentleman-programming
+  version: "1.0"
+---
+```
+
+Key fields:
+- **`name`**: Lowercase identifier with hyphens
+- **`description`**: What the skill does + trigger keywords for discovery
+- **`license`**: Always `Apache-2.0` or `MIT`
+- **`metadata.author`**: Typically `gentleman-programming`
+- **`metadata.version`**: Semantic version as string
+
+Source: `internal/assets/skills/go-testing/SKILL.md:1-10`
+
+## MVP Skills Installed
+
+Gentle AI installs these skills during `install`:
+
+### SDD Skills (9 files)
+
+<CardGroup cols={3}>
+  <Card title="sdd-init" icon="rocket">
+    Initialize SDD context, detect stack, bootstrap persistence backend.
+  </Card>
+  <Card title="sdd-explore" icon="magnifying-glass">
+    Explore problem space, analyze existing code, recommend approach.
+  </Card>
+  <Card title="sdd-propose" icon="file-pen">
+    Create change proposals with intent, scope, and rollback plan.
+  </Card>
+  <Card title="sdd-spec" icon="list-check">
+    Write behavioral specs using Given/When/Then scenarios.
+  </Card>
+  <Card title="sdd-design" icon="diagram-project">
+    Make architectural decisions, document rationale.
+  </Card>
+  <Card title="sdd-tasks" icon="tasks">
+    Break designs into implementable tasks with dependencies.
+  </Card>
+  <Card title="sdd-apply" icon="code">
+    Implement tasks, write actual code following specs.
+  </Card>
+  <Card title="sdd-verify" icon="check-circle">
+    Verify implementation matches specs, run tests.
+  </Card>
+  <Card title="sdd-archive" icon="box-archive">
+    Archive completed changes, merge deltas into main specs.
+  </Card>
+</CardGroup>
+
+### Foundation Skills (2 files)
+
+<CardGroup cols={2}>
+  <Card title="go-testing" icon="vial">
+    Go testing patterns: table-driven tests, Bubbletea TUI testing, golden files, teatest integration.
+  </Card>
+  <Card title="skill-creator" icon="wand-magic-sparkles">
+    Creates new skill files following the Agent Skills spec. Includes naming conventions and frontmatter rules.
+  </Card>
+</CardGroup>
+
+Source: `internal/catalog/skills.go:12-27`
+
+### Shared Conventions (3 files)
+
+Written to `_shared/` subdirectory:
+
+- **`persistence-contract.md`**: Mode resolution rules (engram/openspec/hybrid/none)
+- **`engram-convention.md`**: Engram naming patterns and topic key structure
+- **`openspec-convention.md`**: Filesystem directory structure and file paths
+
+These are referenced by SDD skills but NOT listed in the skill registry (they're conventions, not skills).
+
+Source: `internal/components/sdd/inject.go:103-127`
+
+## Skill Registry
+
+The skill registry is a catalog that sub-agents read before starting any task.
+
+### Purpose
+
+The registry provides:
+- **Fast discovery**: Sub-agents don't need to scan filesystem
+- **Cross-session cache**: When stored in Engram, survives compaction
+- **Project + user skills**: Combines skills from all known locations
+- **Convention tracking**: Lists project convention files (AGENTS.md, .cursorrules, etc.)
+
+### Registry Location
+
+| Source | Location | Priority |
+|--------|----------|----------|
+| Engram | `topic_key: "skill-registry"` | Read FIRST (fast, cross-session) |
+| File | `.atl/skill-registry.md` | Fallback if Engram not available |
+
+The registry is ALWAYS written to `.atl/skill-registry.md` regardless of persistence mode. If Engram is available, it's also saved there as a bonus.
+
+Source: `internal/assets/skills/_shared/persistence-contract.md:127-142`
+
+### How to Generate
+
+Run `/sdd-init` (which includes registry generation) or use the `skill-registry` skill directly.
+
+Registry generation scans:
+1. **User-level skills**: `~/.claude/skills/`, `~/.config/opencode/skills/`, `~/.gemini/skills/`, `~/.cursor/skills/`, `~/.copilot/skills/`
+2. **Project-level skills**: `.claude/skills/`, `.gemini/skills/`, `.agent/skills/`, `skills/`
+3. **Project conventions**: `agents.md`, `AGENTS.md`, `CLAUDE.md`, `.cursorrules`, `GEMINI.md`, `copilot-instructions.md`
+4. **Deduplication**: Project-level skills override user-level if names match
+
+Source: `internal/assets/skills/sdd-init/SKILL.md:100-108`
+
+### Sub-Agent Loading Protocol
+
+**EVERY sub-agent MUST check the skill registry as its FIRST step**:
+
+```
+1. Try Engram first: mem_search(query: "skill-registry", project: "{project}")
+   → if found: mem_get_observation(id) → full registry
+2. If Engram not available or not found: read .atl/skill-registry.md
+3. If neither exists: proceed without skills (not an error)
+4. From the registry, identify skills matching your task
+5. Read those specific SKILL.md files
+6. Also read any project convention files listed in the registry
+7. THEN proceed with your actual task
+```
+
+Source: `internal/assets/skills/_shared/persistence-contract.md:145-161`
+
+## Skill Content Guidelines
+
+### DO
+- Start with the most critical patterns
+- Use tables for decision trees
+- Keep code examples minimal and focused
+- Include Commands section with copy-paste commands
+- Reference local documentation in `references/`
+
+### DON'T
+- Add Keywords section (agents search frontmatter, not body)
+- Duplicate content from existing docs (reference instead)
+- Include lengthy explanations (link to docs)
+- Add troubleshooting sections (keep focused)
+- Use web URLs in references (use local paths)
+
+Source: `internal/assets/skills/skill-creator/SKILL.md:120-133`
+
+## Example: go-testing Skill
+
+### Pattern: Table-Driven Tests
+
+```go
+func TestSomething(t *testing.T) {
+    tests := []struct {
+        name     string
+        input    string
+        expected string
+        wantErr  bool
+    }{
+        {
+            name:     "valid input",
+            input:    "hello",
+            expected: "HELLO",
+            wantErr:  false,
+        },
+        {
+            name:     "empty input",
+            input:    "",
+            expected: "",
+            wantErr:  true,
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            result, err := ProcessInput(tt.input)
+
+            if (err != nil) != tt.wantErr {
+                t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
+                return
+            }
+
+            if result != tt.expected {
+                t.Errorf("got %q, want %q", result, tt.expected)
+            }
+        })
+    }
+}
+```
+
+Source: `internal/assets/skills/go-testing/SKILL.md:29-66`
+
+### Decision Tree
+
+```
+Testing a function?
+├── Pure function? → Table-driven test
+├── Has side effects? → Mock dependencies
+├── Returns error? → Test both success and error cases
+└── Complex logic? → Break into smaller testable units
+
+Testing TUI component?
+├── State change? → Test Model.Update() directly
+├── Full flow? → Use teatest.NewTestModel()
+├── Visual output? → Use golden file testing
+└── Key handling? → Send tea.KeyMsg
+```
+
+Source: `internal/assets/skills/go-testing/SKILL.md:142-159`
+
+## Creating Custom Skills
+
+Use the `skill-creator` skill to generate new skills:
+
+```bash
+# In your AI conversation
+"Create a skill for React 19 testing patterns"
+```
+
+The skill-creator will:
+1. Check if skill already exists
+2. Validate naming conventions
+3. Generate frontmatter with proper structure
+4. Create example sections (patterns, code, commands)
+5. Add entry to `AGENTS.md` table
+
+Source: `internal/assets/skills/skill-creator/SKILL.md:145-155`
+
+### Naming Conventions
+
+| Type | Pattern | Examples |
+|------|---------|----------|
+| Generic skill | `{technology}` | `pytest`, `playwright`, `typescript` |
+| Project-specific | `{project}-{component}` | `myapp-api`, `myapp-ui` |
+| Testing skill | `{project}-test-{component}` | `myapp-test-sdk`, `myapp-test-api` |
+| Workflow skill | `{action}-{target}` | `skill-creator`, `jira-task` |
+
+Source: `internal/assets/skills/skill-creator/SKILL.md:83-90`
+
+## FAQ
+
+<Accordion title="What happens if a skill file is missing?">
+  The installer logs a warning and skips that skill. Other skills continue to install normally. Missing skills are tracked in `InjectionResult.Skipped`.
+</Accordion>
+
+<Accordion title="Can I edit installed skills?">
+  Yes! Skills are just markdown files in your agent's skills directory. Edit them directly to customize patterns for your workflow.
+</Accordion>
+
+<Accordion title="How do I know which skills are loaded?">
+  Check `.atl/skill-registry.md` in your project root, or query Engram with `mem_search(query: "skill-registry", project: "yourproject")`.
+</Accordion>
+
+<Accordion title="Why are skills separate from system prompts?">
+  Skills are **task-specific** and loaded on-demand. System prompts are **always active**. Separating them reduces token usage—agents only load relevant skills for the current task.
+</Accordion>
+
+<Accordion title="Can I create project-specific skills?">
+  Absolutely. Create a `skills/` directory in your project root and add custom `SKILL.md` files. Project-level skills override user-level skills with the same name.
+</Accordion>
+
+## Related Components
+
+- [SDD](/components/sdd) - Installs 9 SDD skills + 3 shared conventions
+- [Persona](/components/persona) - Works alongside skills in system prompts
+- [Engram](/components/engram) - Caches skill registry across sessions

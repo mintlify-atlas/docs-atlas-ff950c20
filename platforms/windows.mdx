@@ -1,0 +1,435 @@
+---
+title: Windows
+description: Installing and configuring Gentle AI on Windows 10 and 11
+---
+
+## System Requirements
+
+- **Windows Version**: Windows 10 (1809+) or Windows 11
+- **Architecture**: x64 (amd64) or ARM64
+- **Shell**: PowerShell 5.1+ or PowerShell Core 7+
+- **Package Manager**: winget (pre-installed on Windows 10+)
+
+<CardGroup cols={2}>
+  <Card title="Windows 10" icon="windows">
+    Version 1809 (October 2018) or later
+    
+    winget pre-installed (1809+)
+  </Card>
+  <Card title="Windows 11" icon="windows">
+    All versions supported
+    
+    Enhanced terminal experience
+  </Card>
+</CardGroup>
+
+## Installation
+
+### Quick Install (Recommended)
+
+Use the PowerShell installer:
+
+```powershell
+irm https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/scripts/install.ps1 | iex
+```
+
+<Info>
+`irm` = `Invoke-RestMethod` and `iex` = `Invoke-Expression` (PowerShell shorthand)
+</Info>
+
+This downloads the correct binary for your architecture and launches the TUI.
+
+### winget (Windows 10+)
+
+<Note>
+winget package submission is pending. Manual installation or PowerShell installer recommended for now.
+</Note>
+
+Once available:
+```powershell
+winget install GentlemanProgramming.GentleAI
+```
+
+### Go Install
+
+If you have Go 1.24+ installed:
+
+```powershell
+go install github.com/gentleman-programming/gentle-ai/cmd/gentle-ai@latest
+
+# Add to PATH (if not already)
+$env:Path += ";$env:USERPROFILE\go\bin"
+[System.Environment]::SetEnvironmentVariable("Path", $env:Path, "User")
+```
+
+### Manual Download
+
+Download from [GitHub Releases](https://github.com/Gentleman-Programming/gentle-ai/releases):
+
+<CodeGroup>
+
+```powershell x64 (amd64)
+# Download
+Invoke-WebRequest -Uri https://github.com/Gentleman-Programming/gentle-ai/releases/download/v1.0.0/gentle-ai_1.0.0_windows_amd64.zip -OutFile gentle-ai.zip
+
+# Extract
+Expand-Archive gentle-ai.zip -DestinationPath .
+
+# Move to PATH (requires admin)
+Move-Item gentle-ai.exe C:\Windows\System32\
+
+# Or move to user directory (no admin)
+Move-Item gentle-ai.exe $env:USERPROFILE\bin\
+$env:Path += ";$env:USERPROFILE\bin"
+```
+
+```powershell ARM64
+# Download
+Invoke-WebRequest -Uri https://github.com/Gentleman-Programming/gentle-ai/releases/download/v1.0.0/gentle-ai_1.0.0_windows_arm64.zip -OutFile gentle-ai.zip
+
+# Extract
+Expand-Archive gentle-ai.zip -DestinationPath .
+
+# Move to PATH
+Move-Item gentle-ai.exe C:\Windows\System32\
+```
+
+</CodeGroup>
+
+## Dependencies
+
+### Required Tools
+
+| Tool | Install Command | Check |
+|------|----------------|-------|
+| git | `winget install Git.Git` | `git --version` |
+| curl | Pre-installed (Win10+) | `curl --version` |
+| node | `winget install OpenJS.NodeJS.LTS` | `node --version` |
+| npm | Included with node | `npm --version` |
+
+<Info>
+`curl` is pre-installed on Windows 10 (1803+) and Windows 11. You typically don't need to install it separately.
+</Info>
+
+### Installing Missing Dependencies
+
+```powershell
+# Install all at once
+winget install Git.Git OpenJS.NodeJS.LTS
+
+# Or individually
+winget install Git.Git
+winget install OpenJS.NodeJS.LTS
+```
+
+### npm Global Installs
+
+Unlike macOS/Linux, Windows npm global installs are **user-writable by default**:
+
+```powershell
+# Check npm prefix (should be under %APPDATA%)
+npm config get prefix
+# C:\Users\YourName\AppData\Roaming\npm
+```
+
+<Tip>
+**No admin/sudo needed** for npm global installs on Windows. Gentle AI takes advantage of this.
+</Tip>
+
+## Configuration Paths
+
+### Agent Directories
+
+```powershell
+%USERPROFILE%\.claude\                      # Claude Code
+%USERPROFILE%\.config\opencode\             # OpenCode
+%USERPROFILE%\.gemini\                      # Gemini CLI
+%USERPROFILE%\.cursor\                      # Cursor
+%USERPROFILE%\.copilot\                     # VS Code Copilot (skills)
+%APPDATA%\Code\User\                        # VS Code settings
+```
+
+Expands to (example):
+```
+C:\Users\YourName\.claude\
+C:\Users\YourName\.config\opencode\
+C:\Users\YourName\.gemini\
+C:\Users\YourName\.cursor\
+C:\Users\YourName\.copilot\
+C:\Users\YourName\AppData\Roaming\Code\User\
+```
+
+### Gentle AI Data
+
+```powershell
+%USERPROFILE%\.gentle-ai\
+  backups\                    # Configuration snapshots
+  logs\                       # Installation logs (future)
+```
+
+## Windows-Specific Features
+
+### PowerShell Compatibility
+
+Gentle AI works in:
+
+- **Windows PowerShell 5.1** (built-in)
+- **PowerShell Core 7+** (cross-platform)
+- **Windows Terminal** (modern terminal app)
+- **VSCode integrated terminal**
+
+<Tip>
+**Windows Terminal** (available from Microsoft Store) provides the best TUI experience with better color support and rendering.
+</Tip>
+
+### Shell Detection
+
+When `$SHELL` is not set (typical on Windows), Gentle AI defaults to `powershell`.
+
+### Archive Format
+
+Windows releases use `.zip` format instead of `.tar.gz`:
+
+```powershell
+# Extract
+Expand-Archive gentle-ai_1.0.0_windows_amd64.zip
+```
+
+### Antivirus Compatibility
+
+Some antivirus products may flag unsigned Go binaries heuristically.
+
+**Solution**: Verify authenticity using checksums.
+
+<Accordion title="Checksum Verification">
+```powershell
+# Download checksums.txt from release
+Invoke-WebRequest -Uri https://github.com/Gentleman-Programming/gentle-ai/releases/download/v1.0.0/checksums.txt -OutFile checksums.txt
+
+# Compute local hash
+Get-FileHash .\gentle-ai_1.0.0_windows_amd64.zip -Algorithm SHA256
+
+# Compare output with checksums.txt
+cat checksums.txt | Select-String "windows_amd64"
+```
+
+If hashes match, the file is authentic.
+</Accordion>
+
+### Windows Defender SmartScreen
+
+First run may trigger SmartScreen:
+
+1. Windows shows "Windows protected your PC"
+2. Click "More info"
+3. Click "Run anyway"
+
+<Info>
+This is expected for unsigned binaries. The file is safe (verify checksum if concerned).
+</Info>
+
+## Terminal Configuration
+
+### Windows Terminal (Recommended)
+
+Install from Microsoft Store or winget:
+
+```powershell
+winget install Microsoft.WindowsTerminal
+```
+
+**Benefits**:
+- Better color support
+- Modern rendering engine
+- Tabs and splits
+- Customizable themes
+
+<Tip>
+Configure Windows Terminal to use PowerShell Core 7 as default for the best experience.
+</Tip>
+
+### Color Support
+
+Ensure 256 color support:
+
+```powershell
+# Check current colors
+[System.Console]::BackgroundColor
+[System.Console]::ForegroundColor
+
+# Windows Terminal has full 256 color support by default
+```
+
+### Font Recommendations
+
+For the best TUI experience:
+
+- **Cascadia Code** (included with Windows Terminal)
+- **JetBrains Mono**
+- **Fira Code**
+- **Consolas** (built-in, works fine)
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Command not found: gentle-ai">
+    **Issue**: Binary not in PATH.
+    
+    **Solution**:
+    ```powershell
+    # Check PATH
+    $env:Path
+    
+    # Add directory to PATH (user-level, persistent)
+    $currentPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+    $newPath = "$currentPath;$env:USERPROFILE\bin"
+    [System.Environment]::SetEnvironmentVariable("Path", $newPath, "User")
+    
+    # Restart PowerShell to apply
+    ```
+  </Accordion>
+  
+  <Accordion title="PowerShell execution policy error">
+    **Issue**: Scripts are blocked by execution policy.
+    
+    **Solution**:
+    ```powershell
+    # Check current policy
+    Get-ExecutionPolicy
+    
+    # Allow local scripts (requires admin)
+    Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+    
+    # Or run installer with bypass
+    powershell -ExecutionPolicy Bypass -Command "irm https://.../install.ps1 | iex"
+    ```
+  </Accordion>
+  
+  <Accordion title="TUI doesn't render correctly">
+    **Issue**: Broken layout in PowerShell.
+    
+    **Solution**: Use Windows Terminal instead:
+    ```powershell
+    # Install Windows Terminal
+    winget install Microsoft.WindowsTerminal
+    
+    # Open and run gentle-ai
+    wt -p PowerShell
+    gentle-ai
+    ```
+  </Accordion>
+  
+  <Accordion title="Antivirus blocks the executable">
+    **Issue**: Windows Defender or third-party antivirus quarantines gentle-ai.exe.
+    
+    **Solution**:
+    1. Verify checksum (see above)
+    2. Add exclusion in Windows Defender:
+       - Settings → Update & Security → Windows Security → Virus & threat protection
+       - Manage settings → Exclusions → Add exclusion
+       - Select "File" and add `gentle-ai.exe`
+  </Accordion>
+  
+  <Accordion title="npm not found after installing Node">
+    **Issue**: npm not in PATH after Node.js installation.
+    
+    **Solution**: Restart PowerShell or add npm to PATH:
+    ```powershell
+    # npm is typically here
+    $env:Path += ";$env:APPDATA\npm"
+    
+    # Or restart PowerShell to reload PATH
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Windows-Specific Notes
+
+### File Paths
+
+Windows uses backslashes, but Gentle AI handles this automatically:
+
+```powershell
+# Input (forward slash - works)
+~/.claude/CLAUDE.md
+
+# Internally converted to
+C:\Users\YourName\.claude\CLAUDE.md
+```
+
+### Case Sensitivity
+
+Windows filesystems are case-insensitive by default:
+
+- `CLAUDE.md` = `claude.md` (same file)
+- Agent config files use uppercase convention
+
+### Line Endings
+
+Gentle AI preserves Windows line endings (CRLF) in generated files:
+
+- Existing files: Preserves original line endings
+- New files: Uses system default (CRLF on Windows)
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Windows Terminal" icon="terminal">
+    Modern terminal with better rendering
+  </Card>
+  <Card title="PowerShell Core 7" icon="code">
+    Latest PowerShell for best compatibility
+  </Card>
+  <Card title="Verify Checksums" icon="shield">
+    Confirm authenticity if antivirus flags
+  </Card>
+  <Card title="Regular Updates" icon="arrows-rotate">
+    Check for new releases periodically
+  </Card>
+</CardGroup>
+
+## WSL (Windows Subsystem for Linux)
+
+If using WSL, follow the [Linux installation guide](/platforms/linux) instead:
+
+```bash
+# Inside WSL (Ubuntu)
+curl -fsSL https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/scripts/install.sh | bash
+```
+
+<Warning>
+WSL and native Windows use different agent config paths. Install Gentle AI in the environment where your agent runs.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Quickstart"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Complete your first installation
+  </Card>
+  <Card
+    title="Interactive Mode"
+    icon="terminal"
+    href="/guides/interactive-mode"
+  >
+    Learn the TUI workflow
+  </Card>
+  <Card
+    title="Platform Overview"
+    icon="laptop"
+    href="/platforms/overview"
+  >
+    Compare all platforms
+  </Card>
+  <Card
+    title="CLI Mode"
+    icon="code"
+    href="/guides/cli-mode"
+  >
+    Master command-line installation
+  </Card>
+</CardGroup>

@@ -1,97 +1,163 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Gentle AI"
+description: "AI agent ecosystem configurator that supercharges Claude Code, OpenCode, Gemini CLI, Cursor, and VS Code Copilot with memory, skills, workflows, and MCP tools"
 ---
 
-## Setting up
+<div style={{
+  background: 'linear-gradient(135deg, #94cb04 0%, #545454 100%)',
+  padding: '60px 40px',
+  borderRadius: '8px',
+  marginBottom: '40px',
+  color: '#1a1a1a'
+}}>
+  <h1 style={{
+    fontSize: '48px',
+    fontWeight: '700',
+    marginBottom: '20px',
+    color: '#1a1a1a'
+  }}>
+    One Command. Any Agent. Any OS.
+  </h1>
+  <p style={{
+    fontSize: '18px',
+    marginBottom: '30px',
+    color: '#1a1a1a',
+    maxWidth: '800px'
+  }}>
+    The Gentleman AI ecosystem — configured and ready. Transform your AI coding agent with persistent memory, Spec-Driven Development workflows, curated skills, and powerful MCP tools.
+  </p>
+  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+    <a href="/quickstart" style={{
+      background: '#e6e6e6',
+      color: '#1a1a1a',
+      padding: '12px 24px',
+      borderRadius: '6px',
+      textDecoration: 'none',
+      fontWeight: '700',
+      fontSize: '14px'
+    }}>
+      Get Started →
+    </a>
+    <a href="https://github.com/Gentleman-Programming/gentle-ai" style={{
+      background: 'transparent',
+      color: '#1a1a1a',
+      padding: '12px 24px',
+      border: '2px solid #1a1a1a',
+      borderRadius: '6px',
+      textDecoration: 'none',
+      fontWeight: '700',
+      fontSize: '14px'
+    }}>
+      View on GitHub
+    </a>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+## What Is Gentle AI?
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+This is **NOT** an AI agent installer. Most agents are easy to install. This is an **ecosystem configurator** — it takes whatever AI coding agent(s) you use and supercharges them with the Gentleman stack.
 
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Engram Memory" icon="brain" href="/components/engram">
+    Persistent cross-session memory that remembers your context
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="SDD Workflow" icon="diagram-project" href="/components/sdd">
+    9-phase Spec-Driven Development orchestration
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Curated Skills" icon="book-open" href="/skills/overview">
+    11 coding skill files including SDD and Go testing patterns
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="MCP Tools" icon="plug" href="/components/context7">
+    Context7 server for live framework documentation
   </Card>
-</Columns>
+  <Card title="GGA Provider Switcher" icon="shield-halved" href="/components/gga">
+    Gentleman Guardian Angel for seamless AI provider switching
+  </Card>
+  <Card title="Teaching Persona" icon="graduation-cap" href="/components/persona">
+    Security-first, teaching-oriented agent behavior
+  </Card>
+</CardGroup>
 
-## Create beautiful pages
+## Quick Install
 
-Everything you need to create world-class documentation.
+<CodeGroup>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+```bash macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/scripts/install.sh | bash
+```
 
-## Need inspiration?
+```powershell Windows
+irm https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/scripts/install.ps1 | iex
+```
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+```bash Homebrew
+brew tap Gentleman-Programming/homebrew-tap
+brew install gentle-ai
+```
+
+```bash Go Install
+go install github.com/gentleman-programming/gentle-ai/cmd/gentle-ai@latest
+```
+
+</CodeGroup>
+
+This downloads the latest release for your platform and launches the interactive TUI. No Go toolchain required for the shell installers.
+
+## Supported Agents
+
+Gentle AI configures these major AI coding agents with the full ecosystem:
+
+<CardGroup cols={3}>
+  <Card title="Claude Code" icon="cube" href="/agents/claude-code">
+    Full support with skills, MCP, and output styles
+  </Card>
+  <Card title="OpenCode" icon="code" href="/agents/opencode">
+    Complete integration with slash commands
+  </Card>
+  <Card title="Gemini CLI" icon="gem" href="/agents/gemini-cli">
+    Full support with experimental sub-agents
+  </Card>
+  <Card title="Cursor" icon="arrow-pointer" href="/agents/cursor">
+    Async sub-agents and nested trees (v2.5+)
+  </Card>
+  <Card title="VS Code Copilot" icon="microsoft" href="/agents/vscode-copilot">
+    Parallel execution and custom agents
+  </Card>
+</CardGroup>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Cross-Platform" icon="laptop" href="/platforms/overview">
+    Works on macOS, Linux (Ubuntu, Arch), and Windows 10/11
+  </Card>
+  <Card title="Interactive TUI" icon="window" href="/guides/interactive-mode">
+    Beautiful Bubbletea interface with Rose Pine theme
+  </Card>
+  <Card title="CLI Mode" icon="terminal" href="/guides/cli-mode">
+    Full non-interactive mode for automation and CI/CD
+  </Card>
+  <Card title="Flexible Presets" icon="sliders" href="/guides/presets">
+    Full Gentleman, Ecosystem Only, Minimal, or Custom
+  </Card>
+  <Card title="Dependency Management" icon="boxes-stacked" href="/platforms/overview">
+    Auto-detects tools and provides platform-specific guidance
+  </Card>
+  <Card title="Atomic Backup" icon="clock-rotate-left" href="/guides/backup-restore">
+    Rollback support for safe configuration changes
+  </Card>
+</CardGroup>
+
+## Get Started
+
+<CardGroup cols={3}>
+  <Card title="Quickstart" icon="bolt" href="/quickstart">
+    Get up and running in under 5 minutes
+  </Card>
+  <Card title="Installation Guide" icon="download" href="/installation">
+    Detailed setup for all platforms
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/concepts/architecture">
+    Understand how Gentle AI works
+  </Card>
+</CardGroup>

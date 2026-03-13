@@ -1,80 +1,245 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get Gentle AI up and running in under 5 minutes
 ---
 
-## Get started in three steps
+## Overview
 
-Get your documentation site running locally and make your first customization.
+This quickstart guide will have you configuring your AI coding agents with the Gentle AI ecosystem in under 5 minutes.
 
-### Step 1: Set up your local environment
+## Prerequisites
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+- **macOS**, **Linux** (Ubuntu/Debian/Arch), or **Windows 10/11**
+- One or more AI coding agents installed:
+  - [Claude Code](https://claude.ai/download)
+  - [OpenCode](https://opencode.sh)
+  - [Gemini CLI](https://ai.google.dev/gemini-api/docs/cli)
+  - [Cursor](https://cursor.sh)
+  - [VS Code](https://code.visualstudio.com) with GitHub Copilot
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+Don't have an agent installed yet? No problem! Gentle AI can configure any agent after you install it.
 </Note>
+
+## Installation
+
+Choose your installation method:
+
+<CodeGroup>
+
+```bash macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/scripts/install.sh | bash
+```
+
+```powershell Windows
+irm https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/scripts/install.ps1 | iex
+```
+
+```bash Homebrew
+brew tap Gentleman-Programming/homebrew-tap
+brew install gentle-ai
+```
+
+```bash Go Install
+go install github.com/gentleman-programming/gentle-ai/cmd/gentle-ai@latest
+```
+
+</CodeGroup>
+
+This downloads the latest release for your platform and launches the interactive TUI.
+
+## Interactive Configuration
+
+<Steps>
+  <Step title="Select Your Agents">
+    Choose which agents to configure:
+    
+    ```
+    ┌─ Select Agents ──────────────────────┐
+    │ [x] Claude Code                      │
+    │ [ ] OpenCode                         │
+    │ [ ] Gemini CLI                       │
+    │ [ ] Cursor                           │
+    │ [ ] VS Code Copilot                  │
+    └──────────────────────────────────────┘
+    ```
+    
+    Use arrow keys to navigate, space to select, enter to continue.
+  </Step>
+  
+  <Step title="Choose a Preset">
+    Select your configuration level:
+    
+    - **Full Gentleman**: All components + all skills + gentleman persona
+    - **Ecosystem Only**: All components + core skills + gentleman persona
+    - **Minimal**: Engram + Persona + Permissions only
+    - **Custom**: Pick components and skills individually
+    
+    **Recommendation**: Start with **Ecosystem Only** for a balanced setup.
+  </Step>
+  
+  <Step title="Review & Install">
+    Gentle AI will:
+    
+    1. Detect missing dependencies (git, curl, node, npm)
+    2. Show the installation plan
+    3. Create a backup of existing configs
+    4. Install selected components
+    5. Verify installation success
+    
+    The entire process takes 30-60 seconds.
+  </Step>
+  
+  <Step title="Verify Installation">
+    After installation completes, you'll see a verification report:
+    
+    ```
+    ✓ Claude Code configured successfully
+    ✓ Engram protocol injected
+    ✓ SDD orchestrator installed
+    ✓ 11 skills copied to ~/.claude/skills/
+    ✓ Context7 MCP server configured
+    ✓ Gentleman persona applied
+    ```
+  </Step>
+</Steps>
+
+## Verify It Works
+
+<Tabs>
+  <Tab title="Claude Code">
+    Open Claude Code and try:
+    
+    ```
+    /sdd-init
+    ```
+    
+    This initializes SDD context in your current project. Claude will ask about your project architecture and save it to Engram memory.
+  </Tab>
+  
+  <Tab title="OpenCode">
+    Open OpenCode and try:
+    
+    ```
+    /sdd-init
+    ```
+    
+    The agent will bootstrap SDD context for your project using the installed skills.
+  </Tab>
+  
+  <Tab title="Gemini CLI">
+    Run:
+    
+    ```bash
+    gemini "Help me initialize SDD for this project"
+    ```
+    
+    Gemini CLI will use the `sdd-init` skill to set up project context.
+  </Tab>
+  
+  <Tab title="Cursor">
+    In Cursor's chat:
+    
+    ```
+    Initialize SDD context for this project
+    ```
+    
+    Cursor will detect the SDD skills and guide you through initialization.
+  </Tab>
+  
+  <Tab title="VS Code Copilot">
+    In VS Code chat:
+    
+    ```
+    @workspace Initialize SDD context
+    ```
+    
+    Copilot will use the installed skills to bootstrap SDD for your workspace.
+  </Tab>
+</Tabs>
+
+## What Just Happened?
+
+Gentle AI configured your agents with:
+
+<CardGroup cols={2}>
+  <Card title="Engram Memory" icon="brain" href="/components/engram">
+    Persistent cross-session memory via MCP
+  </Card>
+  <Card title="SDD Workflow" icon="diagram-project" href="/components/sdd">
+    9-phase Spec-Driven Development orchestration
+  </Card>
+  <Card title="11 Skills" icon="book" href="/skills/overview">
+    SDD workflow + Go testing + skill creation
+  </Card>
+  <Card title="Context7 MCP" icon="plug" href="/components/context7">
+    Live framework documentation
+  </Card>
+  <Card title="Gentleman Persona" icon="graduation-cap" href="/components/persona">
+    Teaching-oriented, security-first behavior
+  </Card>
+  <Card title="Security Guardrails" icon="shield" href="/components/permissions">
+    Safe git operations and permissions
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="Interactive Mode Guide" icon="window" href="/guides/interactive-mode">
+    Master the TUI workflow
+  </Card>
+  <Card title="CLI Mode" icon="terminal" href="/guides/cli-mode">
+    Use Gentle AI from the command line
+  </Card>
+  <Card title="SDD Workflow" icon="diagram-project" href="/skills/sdd-workflow">
+    Learn the 9-phase SDD methodology
+  </Card>
+  <Card title="Presets Guide" icon="sliders" href="/guides/presets">
+    Understand preset configurations
+  </Card>
+  <Card title="Platform Support" icon="laptop" href="/platforms/overview">
+    Platform-specific guidance
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/concepts/architecture">
+    How Gentle AI works
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<Accordion title="Dependencies Missing">
+Gentle AI auto-detects missing tools (git, curl, node, npm) and provides platform-specific installation commands.
+
+**macOS**: `brew install <tool>`  
+**Linux**: `apt install <tool>` or `pacman -S <tool>`  
+**Windows**: `winget install <tool>`
+</Accordion>
+
+<Accordion title="Permission Errors">
+If npm global install fails with permission errors:
+
+```bash
+# Option 1: Use a node version manager (recommended)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+nvm install node
+
+# Option 2: Fix npm prefix
+npm config set prefix ~/.npm-global
+export PATH=~/.npm-global/bin:$PATH
+```
+</Accordion>
+
+<Accordion title="Agent Not Detected">
+If Gentle AI doesn't detect your installed agent:
+
+1. Check the agent is installed at the expected path
+2. Manually create the config directory if needed
+3. Run `gentle-ai install --agent <agent-id>` explicitly
+</Accordion>
+
+## Get Help
+
+- **GitHub Issues**: [Report a bug](https://github.com/Gentleman-Programming/gentle-ai/issues)
+- **Documentation**: [Full docs](/introduction)
+- **Source Code**: [View on GitHub](https://github.com/Gentleman-Programming/gentle-ai)

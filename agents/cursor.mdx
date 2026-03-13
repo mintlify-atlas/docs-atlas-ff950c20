@@ -1,0 +1,261 @@
+---
+title: "Cursor"
+description: "Desktop editor with async sub-agents, rules-based configuration, and dedicated MCP file"
+---
+
+Cursor is a desktop AI editor with full Gentle AI ecosystem support, including skills, MCP servers, async sub-agents (v2.5+), and rules-based system prompts.
+
+## Support Tier
+
+**Full** — Cursor receives the complete SDD orchestrator, skill files, MCP integration, system prompt injection, and sub-agent delegation.
+
+## Configuration Paths
+
+### Primary Config Directory
+```bash
+~/.cursor/
+```
+
+### File Locations
+
+| Purpose | Path |
+|---------|------|
+| System Prompt | `~/.cursor/rules/gentle-ai.mdc` |
+| Skills Directory | `~/.cursor/skills/` |
+| Settings File | `~/.cursor/settings.json` |
+| MCP Config | `~/.cursor/mcp.json` |
+
+### Windows Paths
+```powershell
+%USERPROFILE%\.cursor\rules\gentle-ai.mdc
+%USERPROFILE%\.cursor\skills\sdd-init.md
+%USERPROFILE%\.cursor\mcp.json
+```
+
+## Configuration Strategies
+
+### System Prompt: File Replace (Rules)
+
+Cursor uses **complete file replacement** for system prompts. Gentle AI writes to `~/.cursor/rules/gentle-ai.mdc`.
+
+**Path:** `~/.cursor/rules/gentle-ai.mdc`
+
+<Warning>
+User customizations to `gentle-ai.mdc` will be overwritten. Use a separate rules file for custom instructions.
+</Warning>
+
+<Info>
+Cursor supports multiple rules files. Keep custom instructions in a separate `.mdc` file (e.g., `~/.cursor/rules/custom.mdc`).
+</Info>
+
+### MCP: Dedicated Config File
+
+Cursor uses a dedicated `mcp.json` configuration file for all MCP servers.
+
+**Example: ~/.cursor/mcp.json**
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@context-labs/mcp-server-context7"],
+      "env": {
+        "CONTEXT7_API_KEY": "your-api-key"
+      }
+    },
+    "engram": {
+      "command": "npx",
+      "args": ["-y", "@gentleman-programming/mcp-server-engram"],
+      "env": {}
+    }
+  }
+}
+```
+
+## Capabilities
+
+### Skills ✅
+
+Skills are written to `~/.cursor/skills/` as markdown files:
+
+```bash
+~/.cursor/skills/
+├── sdd-init.md
+├── sdd-explore.md
+├── sdd-propose.md
+├── sdd-spec.md
+├── sdd-design.md
+├── sdd-tasks.md
+├── sdd-apply.md
+├── sdd-verify.md
+├── sdd-archive.md
+├── go-testing.md
+└── skill-creator.md
+```
+
+### MCP Servers ✅
+
+MCP servers are configured in `~/.cursor/mcp.json`. Gentle AI configures:
+
+- **Context7** — Live framework/library documentation
+- **Engram** — Persistent cross-session memory
+
+### Sub-agents ✅ Async (v2.5+)
+
+Cursor supports **async sub-agents** (v2.5+) that can:
+- Run in the background
+- Spawn nested sub-agent trees
+- Execute tasks in parallel
+
+<Info>
+Cursor's async sub-agents enable the full SDD orchestration workflow with parallel task execution.
+</Info>
+
+### Slash Commands ❌
+
+Cursor does not support custom slash commands. Use OpenCode if you need slash command support.
+
+### Output Styles ❌
+
+Cursor does not support custom output styles. Use Claude Code if you need output style support.
+
+## Installation
+
+### Auto-Install Support ❌
+
+Cursor is a **desktop application** and must be installed manually.
+
+**Detection Method:** Checks for `~/.cursor/` directory existence.
+
+<Warning>
+Gentle AI cannot automatically install Cursor. Download and install Cursor from [cursor.sh](https://cursor.sh) before running Gentle AI.
+</Warning>
+
+### Manual Installation
+
+<Tabs>
+  <Tab title="macOS">
+    ```bash
+    # Download from cursor.sh or use Homebrew
+    brew install --cask cursor
+    ```
+  </Tab>
+  
+  <Tab title="Linux">
+    ```bash
+    # Download AppImage from cursor.sh
+    # Or use your distro's package manager if available
+    ```
+  </Tab>
+  
+  <Tab title="Windows">
+    ```powershell
+    # Download installer from cursor.sh
+    # Or use winget
+    winget install Cursor.Cursor
+    ```
+  </Tab>
+</Tabs>
+
+## Example Configuration
+
+### Full Gentleman Preset
+
+```bash
+gentle-ai install \
+  --agent cursor \
+  --preset full-gentleman
+```
+
+This installs:
+- ✅ All SDD skills (9 files)
+- ✅ Foundation skills (go-testing, skill-creator)
+- ✅ Context7 + Engram MCP servers
+- ✅ Gentleman persona
+- ✅ Permissions + security defaults
+- ✅ GGA integration (optional)
+
+### Ecosystem Only
+
+```bash
+gentle-ai install \
+  --agent cursor \
+  --preset ecosystem-only
+```
+
+This installs:
+- ✅ P0 skills only (critical SDD workflow)
+- ✅ Context7 + Engram MCP servers
+- ✅ Gentleman persona
+- ✅ Permissions + security defaults
+
+### Multiple Rules Files
+
+Keep custom instructions separate from Gentle AI:
+
+```bash
+~/.cursor/rules/
+├── gentle-ai.mdc       # Managed by Gentle AI
+└── custom.mdc          # Your custom instructions
+```
+
+Cursor will load all `.mdc` files in the `rules/` directory.
+
+## Implementation Details
+
+**Source Code:** `internal/agents/cursor/adapter.go`
+
+**Agent ID:** `cursor`
+
+**Support Tier:** `TierFull`
+
+**System Prompt Strategy:** `StrategyFileReplace`
+
+**MCP Strategy:** `StrategyMCPConfigFile`
+
+## Desktop App Considerations
+
+### No Binary Detection
+
+Cursor is a desktop app with no CLI binary on PATH. Detection is based on config directory existence:
+
+```go
+// internal/agents/cursor/adapter.go:50-52
+// Cursor is a desktop app — no binary on PATH to detect.
+// If config dir exists, it's installed.
+return stat.isDir, "", configPath, stat.isDir, nil
+```
+
+### Cannot Auto-Install
+
+```go
+// internal/agents/cursor/adapter.go:57-63
+func (a *Adapter) SupportsAutoInstall() bool {
+    return false // Desktop app — cannot install via CLI.
+}
+
+func (a *Adapter) InstallCommand(_ system.PlatformProfile) ([][]string, error) {
+    return nil, AgentNotInstallableError{Agent: model.AgentCursor}
+}
+```
+
+<Info>
+Gentle AI will prompt you to install Cursor manually if it's not detected.
+</Info>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation Guide" icon="download" href="/installation">
+    Install Gentle AI and configure Cursor
+  </Card>
+  <Card title="Components" icon="cube" href="/components/engram">
+    Learn about the Gentle AI component ecosystem
+  </Card>
+  <Card title="Skills" icon="brain" href="/components/skills">
+    Explore SDD and foundation skills
+  </Card>
+  <Card title="MCP Servers" icon="plug" href="/components/context7">
+    Configure Context7 and Engram
+  </Card>
+</CardGroup>

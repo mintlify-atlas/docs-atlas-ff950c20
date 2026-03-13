@@ -1,0 +1,401 @@
+---
+title: Foundation Skills
+description: Core patterns for the Gentleman.Dots project
+---
+
+# Foundation Skills
+
+The foundation skills provide core patterns for the Gentleman.Dots project. These skills teach AI agents project-specific testing patterns and skill creation workflows.
+
+## go-testing
+
+**Purpose**: Go testing patterns for Gentleman.Dots, including Bubbletea TUI testing
+
+**Trigger**: When writing Go tests, using teatest, or adding test coverage
+
+**What it covers**:
+- Table-driven tests (standard Go pattern)
+- Bubbletea Model testing (direct state transitions)
+- Teatest integration tests (full TUI flows)
+- Golden file testing (visual output comparison)
+- Mocking system dependencies
+
+### Critical Patterns
+
+#### Pattern 1: Table-Driven Tests
+
+Standard Go pattern for multiple test cases:
+
+```go
+func TestSomething(t *testing.T) {
+    tests := []struct {
+        name     string
+        input    string
+        expected string
+        wantErr  bool
+    }{
+        {
+            name:     "valid input",
+            input:    "hello",
+            expected: "HELLO",
+            wantErr:  false,
+        },
+        {
+            name:     "empty input",
+            input:    "",
+            expected: "",
+            wantErr:  true,
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            result, err := ProcessInput(tt.input)
+
+            if (err != nil) != tt.wantErr {
+                t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
+                return
+            }
+
+            if result != tt.expected {
+                t.Errorf("got %q, want %q", result, tt.expected)
+            }
+        })
+    }
+}
+```
+
+**Key points**:
+- Use struct slice for test cases
+- Each case has descriptive `name`
+- Run cases with `t.Run(tt.name, ...)`
+- Always test both success and error paths
+
+#### Pattern 2: Bubbletea Model Testing
+
+Test Model state transitions directly (no TUI rendering):
+
+```go
+func TestModelUpdate(t *testing.T) {
+    m := NewModel()
+
+    // Simulate key press
+    newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+    m = newModel.(Model)
+
+    if m.Screen != ScreenMainMenu {
+        t.Errorf("expected ScreenMainMenu, got %v", m.Screen)
+    }
+}
+```
+
+**Key points**:
+- Call `Update()` directly with `tea.KeyMsg`
+- Type assert result to `Model`
+- Check state changes (screen, cursor, flags)
+- No need to render View (unit test, not integration)
+
+#### Pattern 3: Teatest Integration Tests
+
+Use Charmbracelet's teatest for full TUI testing:
+
+```go
+func TestInteractiveFlow(t *testing.T) {
+    m := NewModel()
+    tm := teatest.NewTestModel(t, m)
+
+    // Send keys
+    tm.Send(tea.KeyMsg{Type: tea.KeyEnter})
+    tm.Send(tea.KeyMsg{Type: tea.KeyDown})
+    tm.Send(tea.KeyMsg{Type: tea.KeyEnter})
+
+    // Wait for model to update
+    tm.WaitFinished(t, teatest.WithDuration(time.Second))
+
+    // Get final model
+    finalModel := tm.FinalModel(t).(Model)
+
+    if finalModel.Screen != ExpectedScreen {
+        t.Errorf("wrong screen: got %v", finalModel.Screen)
+    }
+}
+```
+
+**Key points**:
+- Use `teatest.NewTestModel()` for integration tests
+- Send key sequences with `tm.Send()`
+- Wait for updates with `tm.WaitFinished()`
+- Get final state with `tm.FinalModel()`
+
+#### Pattern 4: Golden File Testing
+
+Compare output against saved "golden" files:
+
+```go
+func TestOSSelectGolden(t *testing.T) {
+    m := NewModel()
+    m.Screen = ScreenOSSelect
+    m.Width = 80
+    m.Height = 24
+
+    output := m.View()
+
+    golden := filepath.Join("testdata", "TestOSSelectGolden.golden")
+
+    if *update {
+        os.WriteFile(golden, []byte(output), 0644)
+    }
+
+    expected, _ := os.ReadFile(golden)
+    if output != string(expected) {
+        t.Errorf("output doesn't match golden file")
+    }
+}
+```
+
+**Key points**:
+- Render `View()` with fixed dimensions
+- Compare against golden file in `testdata/`
+- Use `-update` flag to regenerate goldens
+- Tests visual output (not just logic)
+
+### Decision Tree
+
+```
+Testing a function?
+├── Pure function? → Table-driven test
+├── Has side effects? → Mock dependencies
+├── Returns error? → Test both success and error cases
+└── Complex logic? → Break into smaller testable units
+
+Testing TUI component?
+├── State change? → Test Model.Update() directly
+├── Full flow? → Use teatest.NewTestModel()
+├── Visual output? → Use golden file testing
+└── Key handling? → Send tea.KeyMsg
+
+Testing system/exec?
+├── Mock os/exec? → Use interface + mock
+├── Real commands? → Integration test with --short skip
+└── File operations? → Use t.TempDir()
+```
+
+### Commands
+
+```bash
+# Run all tests
+go test ./...
+
+# Verbose TUI tests
+go test -v ./internal/tui/...
+
+# Run specific test
+go test -run TestNavigation
+
+# With coverage
+go test -cover ./...
+
+# Update golden files
+go test -update ./...
+
+# Skip integration tests
+go test -short ./...
+```
+
+### Test File Organization
+
+```
+installer/internal/tui/
+├── model.go
+├── model_test.go           # Model tests
+├── update.go
+├── update_test.go          # Update handler tests
+├── view.go
+├── view_test.go            # View rendering tests
+├── teatest_test.go         # Teatest integration tests
+├── comprehensive_test.go   # Full flow tests
+├── testdata/
+│   ├── TestOSSelectGolden.golden
+│   └── TestViewGolden.golden
+└── trainer/
+    ├── types.go
+    ├── types_test.go
+    ├── exercises.go
+    ├── exercises_test.go
+    └── simulator_test.go
+```
+
+### Resources
+
+- **TUI Tests**: See `installer/internal/tui/*_test.go`
+- **Trainer Tests**: See `installer/internal/tui/trainer/*_test.go`
+- **System Tests**: See `installer/internal/system/*_test.go`
+- **Golden Files**: See `installer/internal/tui/testdata/`
+- **Teatest Docs**: https://github.com/charmbracelet/bubbletea/tree/master/teatest
+
+---
+
+## skill-creator
+
+**Purpose**: Create new AI agent skills following the Agent Skills spec
+
+**Trigger**: When user asks to create a new skill, add agent instructions, or document patterns for AI
+
+**What it covers**:
+- When to create a skill (vs. regular documentation)
+- Skill file structure and naming conventions
+- Frontmatter format and required fields
+- Content guidelines (DO and DON'T)
+- Registering skills in project conventions
+
+### When to Create a Skill
+
+Create a skill when:
+- A pattern is used repeatedly and AI needs guidance
+- Project-specific conventions differ from generic best practices
+- Complex workflows need step-by-step instructions
+- Decision trees help AI choose the right approach
+
+**Don't create a skill when:**
+- Documentation already exists (create a reference instead)
+- Pattern is trivial or self-explanatory
+- It's a one-off task
+
+### Skill Structure
+
+```
+skills/{skill-name}/
+├── SKILL.md              # Required - main skill file
+├── assets/               # Optional - templates, schemas, examples
+│   ├── template.py
+│   └── schema.json
+└── references/           # Optional - links to local docs
+    └── docs.md           # Points to docs/developer-guide/*.mdx
+```
+
+### SKILL.md Template
+
+```markdown
+---
+name: {skill-name}
+description: >
+  {One-line description of what this skill does}.
+  Trigger: {When the AI should load this skill}.
+license: Apache-2.0
+metadata:
+  author: gentleman-programming
+  version: "1.0"
+---
+
+## When to Use
+
+{Bullet points of when to use this skill}
+
+## Critical Patterns
+
+{The most important rules - what AI MUST know}
+
+## Code Examples
+
+{Minimal, focused examples}
+
+## Commands
+
+```bash
+{Common commands}
+```
+
+## Resources
+
+- **Templates**: See `assets/` for {description}
+- **Documentation**: See `references/` for local docs
+```
+
+### Naming Conventions
+
+| Type | Pattern | Examples |
+|------|---------|----------|
+| Generic skill | `{technology}` | `pytest`, `playwright`, `typescript` |
+| Project-specific | `{project}-{component}` | `myapp-api`, `myapp-ui` |
+| Testing skill | `{project}-test-{component}` | `myapp-test-sdk`, `myapp-test-api` |
+| Workflow skill | `{action}-{target}` | `skill-creator`, `jira-task` |
+
+### Decision: assets/ vs references/
+
+```
+Need code templates?        → assets/
+Need JSON schemas?          → assets/
+Need example configs?       → assets/
+Link to existing docs?      → references/
+Link to external guides?    → references/ (with local path)
+```
+
+**Key Rule**: `references/` should point to LOCAL files, not web URLs.
+
+### Content Guidelines
+
+#### DO
+- Start with the most critical patterns
+- Use tables for decision trees
+- Keep code examples minimal and focused
+- Include Commands section with copy-paste commands
+
+#### DON'T
+- Add Keywords section (agent searches frontmatter, not body)
+- Duplicate content from existing docs (reference instead)
+- Include lengthy explanations (link to docs)
+- Add troubleshooting sections (keep focused)
+- Use web URLs in references (use local paths)
+
+### Registering the Skill
+
+After creating the skill, add it to `AGENTS.md`:
+
+```markdown
+| `{skill-name}` | {Description} | [SKILL.md](skills/{skill-name}/SKILL.md) |
+```
+
+### Checklist Before Creating
+
+- [ ] Skill doesn't already exist (check `skills/`)
+- [ ] Pattern is reusable (not one-off)
+- [ ] Name follows conventions
+- [ ] Frontmatter is complete (description includes trigger keywords)
+- [ ] Critical patterns are clear
+- [ ] Code examples are minimal
+- [ ] Commands section exists
+- [ ] Added to AGENTS.md
+
+---
+
+## FAQ
+
+<Accordion title="When should I use table-driven tests vs. teatest?">
+  Use **table-driven tests** for logic and state transitions (fast, isolated).
+  
+  Use **teatest** for full user flows (slower, integration-level).
+  
+  Most tests should be table-driven. Use teatest sparingly for critical paths.
+</Accordion>
+
+<Accordion title="How do I update golden files?">
+  Run tests with the `-update` flag:
+  ```bash
+  go test -update ./internal/tui/...
+  ```
+  This regenerates all `.golden` files in `testdata/`. Review diffs before committing.
+</Accordion>
+
+<Accordion title="Can I create skills for other languages (not Go)?">
+  Yes! The `skill-creator` pattern works for any language. Just follow the same structure: frontmatter, critical patterns, decision trees, code examples.
+</Accordion>
+
+<Accordion title="Should skills include full API documentation?">
+  No. Skills are **reference cards**, not documentation. Link to official docs in the Resources section instead.
+</Accordion>
+
+## Related Resources
+
+- [SDD Workflow Skills](/skills/sdd-workflow) - The 9 skills that implement Spec-Driven Development
+- [Creating Skills](/skills/creating-skills) - Detailed guide for writing custom skills
+- [Skills Component](/components/skills) - Technical details on skill installation

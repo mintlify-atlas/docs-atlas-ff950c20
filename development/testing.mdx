@@ -1,0 +1,701 @@
+---
+title: Testing
+description: Testing strategies, running tests, and writing new tests for Gentle AI
+---
+
+## Testing Philosophy
+
+Gentle AI has three tiers of tests:
+
+1. **Unit Tests** - Fast, isolated, no side effects
+2. **E2E Tests** - Docker-based, full install validation
+3. **Golden File Tests** - Snapshot testing for component output
+
+## Test Coverage
+
+<CardGroup cols={3}>
+  <Card title="50+ Test Files" icon="file">
+    Test files across all packages in `internal/`
+  </Card>
+  <Card title="314 Test Functions" icon="function">
+    Unit tests covering adapters, components, system detection
+  </Card>
+  <Card title="78 E2E Functions" icon="docker">
+    End-to-end tests in Docker (Ubuntu + Arch)
+  </Card>
+  <Card title="17 Golden Files" icon="photo">
+    Snapshot fixtures in `testdata/golden/`
+  </Card>
+  <Card title="5 Agent Adapters" icon="robot">
+    All agents have unit tests with path validation
+  </Card>
+  <Card title="Full Pipeline" icon="flow">
+    Detection, planning, execution, backup, restore
+  </Card>
+</CardGroup>
+
+## Running Tests
+
+### Unit Tests
+
+```bash
+# Run all unit tests
+go test ./...
+
+# Run tests for specific package
+go test ./internal/agents/...
+go test ./internal/components/...
+
+# Run with coverage
+go test -cover ./...
+
+# Run with verbose output
+go test -v ./...
+
+# Run specific test function
+go test ./internal/agents/claude -run TestClaudeAdapter_SkillsDir
+
+# Run tests in parallel (default)
+go test -parallel 4 ./...
+```
+
+### E2E Tests (Docker)
+
+```bash
+# Tier 1 only (binary existence + dry-run, fast)
+./e2e/docker-test.sh
+
+# Tier 1 + 2 (full install tests, writes to filesystem)
+RUN_FULL_E2E=1 ./e2e/docker-test.sh
+
+# Tier 1 + 3 (backup/restore tests)
+RUN_BACKUP_TESTS=1 ./e2e/docker-test.sh
+
+# All tiers (comprehensive)
+RUN_FULL_E2E=1 RUN_BACKUP_TESTS=1 ./e2e/docker-test.sh
+```
+
+**Platforms tested**:
+- Ubuntu 22.04 (apt)
+- Arch Linux (pacman)
+
+### Dry-Run Smoke Tests
+
+```bash
+# macOS/Linux
+gentle-ai install --dry-run --agent claude-code --preset minimal
+
+# Windows PowerShell
+gentle-ai.exe install --dry-run --agent claude-code --preset minimal
+```
+
+## Test Structure
+
+### Unit Test Layout
+
+Test files live alongside implementation:
+
+```
+internal/
+  agents/
+    claude/
+      adapter.go           # Implementation
+      adapter_test.go      # Tests
+  components/
+    skills/
+      installer.go
+      installer_test.go
+```
+
+### Test Naming Convention
+
+```go
+// Format: Test<Type>_<Method>_<Scenario>
+func TestClaudeAdapter_SkillsDir(t *testing.T) { ... }
+func TestSkillsInstaller_Install_CreatesDirectory(t *testing.T) { ... }
+func TestPipeline_Execute_RollsBackOnFailure(t *testing.T) { ... }
+```
+
+## Unit Testing Patterns
+
+### 1. Agent Adapter Tests
+
+**Location**: `internal/agents/<agent>/adapter_test.go`
+
+**Example: Testing Claude Code Adapter**
+
+```go
+func TestClaudeAdapter_SkillsDir(t *testing.T) {
+    adapter := claude.NewAdapter()
+    homeDir := "/home/testuser"
+    
+    got := adapter.SkillsDir(homeDir)
+    want := "/home/testuser/.claude/skills"
+    
+    if got != want {
+        t.Errorf("SkillsDir() = %q, want %q", got, want)
+    }
+}
+
+func TestClaudeAdapter_SystemPromptStrategy(t *testing.T) {
+    adapter := claude.NewAdapter()
+    
+    got := adapter.SystemPromptStrategy()
+    want := model.StrategyMarkdownSections
+    
+    if got != want {
+        t.Errorf("SystemPromptStrategy() = %v, want %v", got, want)
+    }
+}
+
+func TestClaudeAdapter_SupportsOutputStyles(t *testing.T) {
+    adapter := claude.NewAdapter()
+    
+    if !adapter.SupportsOutputStyles() {
+        t.Error("Expected Claude Code to support output styles")
+    }
+}
+```
+
+### 2. Component Tests
+
+**Location**: `internal/components/<component>/*_test.go`
+
+**Example: Testing Skills Installer**
+
+```go
+func TestSkillsInstaller_Install(t *testing.T) {
+    // Setup
+    tmpDir := t.TempDir()
+    adapter := &mockAdapter{
+        skillsDir: filepath.Join(tmpDir, "skills"),
+    }
+    installer := skills.NewInstaller()
+    
+    // Execute
+    err := installer.Install(context.Background(), adapter)
+    
+    // Verify
+    if err != nil {
+        t.Fatalf("Install() error = %v", err)
+    }
+    
+    // Check directory created
+    if _, err := os.Stat(adapter.skillsDir); os.IsNotExist(err) {
+        t.Error("Skills directory was not created")
+    }
+    
+    // Check skill files written
+    files, _ := os.ReadDir(adapter.skillsDir)
+    if len(files) == 0 {
+        t.Error("No skill files written")
+    }
+}
+```
+
+### 3. System Detection Tests
+
+**Location**: `internal/system/*_test.go`
+
+```go
+func TestDetectOS(t *testing.T) {
+    got := system.DetectOS()
+    
+    validOS := []string{"darwin", "linux", "windows"}
+    if !contains(validOS, got) {
+        t.Errorf("DetectOS() = %q, want one of %v", got, validOS)
+    }
+}
+
+func TestDetectDistro_Ubuntu(t *testing.T) {
+    if runtime.GOOS != "linux" {
+        t.Skip("Skipping on non-Linux")
+    }
+    
+    // Mock /etc/os-release
+    osRelease := `ID=ubuntu\nVERSION_ID="22.04"`
+    
+    distro := system.ParseOSRelease(osRelease)
+    
+    if distro.ID != "ubuntu" {
+        t.Errorf("Expected ubuntu, got %s", distro.ID)
+    }
+}
+```
+
+### 4. Pipeline Tests
+
+**Location**: `internal/pipeline/*_test.go`
+
+```go
+func TestOrchestrator_Execute_Success(t *testing.T) {
+    orch := pipeline.NewOrchestrator(pipeline.RollbackOnError)
+    
+    plan := pipeline.StagePlan{
+        Prepare: []pipeline.Step{
+            &mockStep{id: "prepare-1"},
+        },
+        Apply: []pipeline.Step{
+            &mockStep{id: "apply-1"},
+            &mockStep{id: "apply-2"},
+        },
+    }
+    
+    result := orch.Execute(plan)
+    
+    if !result.Success {
+        t.Errorf("Execute() failed: %v", result.Err)
+    }
+    
+    if len(result.Apply.Steps) != 2 {
+        t.Errorf("Expected 2 apply steps, got %d", len(result.Apply.Steps))
+    }
+}
+
+func TestOrchestrator_Execute_RollbackOnFailure(t *testing.T) {
+    orch := pipeline.NewOrchestrator(pipeline.RollbackOnError)
+    
+    plan := pipeline.StagePlan{
+        Apply: []pipeline.Step{
+            &mockStep{id: "success"},
+            &mockStep{id: "failure", shouldFail: true},
+        },
+    }
+    
+    result := orch.Execute(plan)
+    
+    if result.Success {
+        t.Error("Expected failure")
+    }
+    
+    if result.Rollback == nil {
+        t.Error("Expected rollback to run")
+    }
+}
+```
+
+## Golden File Testing
+
+Golden files are snapshot tests - compare generated output against known-good fixtures.
+
+**Location**: `testdata/golden/*.golden`
+
+### Golden File Structure
+
+```
+testdata/
+  golden/
+    persona-claude-gentleman.golden      # Claude persona output
+    persona-opencode-gentleman.golden    # OpenCode persona output
+    skills-claude-go-testing.golden      # Claude skill output
+    engram-claude-mcp.golden             # Engram MCP config
+    sdd-command-sdd-init.md              # SDD command template
+```
+
+### Writing Golden Tests
+
+```go
+func TestPersonaComponent_Golden(t *testing.T) {
+    component := persona.NewComponent()
+    adapter := claude.NewAdapter()
+    
+    // Generate output
+    output := component.GenerateSystemPrompt(adapter, model.PersonaGentleman)
+    
+    // Compare to golden file
+    goldenPath := "testdata/golden/persona-claude-gentleman.golden"
+    
+    if *updateGolden {
+        // Update mode: write new golden file
+        os.WriteFile(goldenPath, []byte(output), 0644)
+        return
+    }
+    
+    // Test mode: compare
+    expected, err := os.ReadFile(goldenPath)
+    if err != nil {
+        t.Fatalf("Failed to read golden file: %v", err)
+    }
+    
+    if string(expected) != output {
+        t.Errorf("Output differs from golden file\n" +
+                 "Run with -update to update golden files")
+    }
+}
+```
+
+### Update Golden Files
+
+```bash
+# Update all golden files
+go test ./internal/components -update
+
+# Update specific package
+go test ./internal/components/persona -update
+```
+
+## E2E Testing (Docker)
+
+### Test Architecture
+
+```
+e2e/
+  docker-test.sh           # Orchestrator - runs tests in containers
+  e2e_test.sh              # Test suite - 78 test functions
+  lib.sh                   # Test utilities (log_test, assert, etc.)
+  Dockerfile.ubuntu        # Ubuntu 22.04 image
+  Dockerfile.arch          # Arch Linux image
+```
+
+### E2E Test Tiers
+
+**Tier 1: Binary + Dry-Run** (always run)
+- Binary exists and is executable
+- Binary runs without panic
+- Dry-run output format validation
+- Platform detection
+
+**Tier 2: Full Install** (`RUN_FULL_E2E=1`)
+- Install components to filesystem
+- Validate created files
+- Check JSON syntax
+- Verify directory structure
+
+**Tier 3: Backup/Restore** (`RUN_BACKUP_TESTS=1`)
+- Create backup snapshots
+- Restore from backups
+- Verify rollback behavior
+
+### E2E Test Examples
+
+```bash
+# e2e/e2e_test.sh (excerpts)
+
+test_binary_exists() {
+    log_test "Binary exists and is executable"
+    
+    if [ -x "$(command -v "$BINARY")" ]; then
+        log_pass "Binary is executable"
+    else
+        log_fail "Binary not found"
+    fi
+}
+
+test_dry_run_output_format() {
+    log_test "Dry-run output contains expected sections"
+    
+    output=$($BINARY install --dry-run 2>&1)
+    
+    assert_output_contains "$output" "Agents:" "Has Agents header"
+    assert_output_contains "$output" "Components:" "Has Components header"
+    assert_output_contains "$output" "Platform:" "Has Platform header"
+}
+
+test_install_creates_skills_dir() {
+    log_test "Install creates skills directory"
+    
+    $BINARY install --agent claude-code --component skills
+    
+    if [ -d "$HOME/.claude/skills" ]; then
+        log_pass "Skills directory created"
+    else
+        log_fail "Skills directory not found"
+    fi
+}
+```
+
+### Running E2E Locally
+
+```bash
+# Build Docker images and run tests
+./e2e/docker-test.sh
+
+# Run full test suite
+RUN_FULL_E2E=1 RUN_BACKUP_TESTS=1 ./e2e/docker-test.sh
+
+# Debug: enter container interactively
+docker run -it --rm gentle-ai-e2e-ubuntu /bin/bash
+```
+
+## Mock Objects
+
+### Mock Adapter
+
+```go
+type mockAdapter struct {
+    agentID       model.AgentID
+    skillsDir     string
+    supportsSkills bool
+}
+
+func (m *mockAdapter) Agent() model.AgentID {
+    return m.agentID
+}
+
+func (m *mockAdapter) SkillsDir(homeDir string) string {
+    return m.skillsDir
+}
+
+func (m *mockAdapter) SupportsSkills() bool {
+    return m.supportsSkills
+}
+
+// ... implement rest of Adapter interface
+```
+
+### Mock Step
+
+```go
+type mockStep struct {
+    id         string
+    shouldFail bool
+    executed   bool
+    rolledBack bool
+}
+
+func (s *mockStep) ID() string { return s.id }
+
+func (s *mockStep) Execute(ctx context.Context) error {
+    s.executed = true
+    if s.shouldFail {
+        return errors.New("mock failure")
+    }
+    return nil
+}
+
+func (s *mockStep) Rollback(ctx context.Context) error {
+    s.rolledBack = true
+    return nil
+}
+```
+
+## Test Utilities
+
+### Temporary Directories
+
+```go
+func TestWithTempDir(t *testing.T) {
+    tmpDir := t.TempDir() // Auto-cleaned up after test
+    
+    // Use tmpDir for test files
+    testFile := filepath.Join(tmpDir, "test.txt")
+    os.WriteFile(testFile, []byte("test"), 0644)
+}
+```
+
+### Table-Driven Tests
+
+```go
+func TestSystemPromptStrategy(t *testing.T) {
+    tests := []struct {
+        name     string
+        agentID  model.AgentID
+        want     model.SystemPromptStrategy
+    }{
+        {"Claude Code", model.AgentClaudeCode, model.StrategyMarkdownSections},
+        {"OpenCode", model.AgentOpenCode, model.StrategyFileReplace},
+        {"Gemini CLI", model.AgentGeminiCLI, model.StrategyAppendToFile},
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            adapter := agents.NewAdapter(tt.agentID)
+            got := adapter.SystemPromptStrategy()
+            
+            if got != tt.want {
+                t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
+            }
+        })
+    }
+}
+```
+
+## CI/CD Integration
+
+### GitHub Actions
+
+```yaml
+# .github/workflows/test.yml (example)
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - run: go test -v -cover ./...
+  
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: RUN_FULL_E2E=1 ./e2e/docker-test.sh
+```
+
+## Writing New Tests
+
+### Checklist
+
+<CardGroup cols={2}>
+  <Card title="Unit Tests" icon="check">
+    - [ ] Test all public methods
+    - [ ] Test error cases
+    - [ ] Test edge cases (empty input, nil, etc.)
+    - [ ] Use table-driven tests for multiple cases
+    - [ ] Mock external dependencies
+  </Card>
+  
+  <Card title="Integration Tests" icon="check">
+    - [ ] Test component interactions
+    - [ ] Use real adapters (not mocks)
+    - [ ] Test filesystem operations in temp dirs
+    - [ ] Verify file contents after operations
+  </Card>
+  
+  <Card title="Golden Tests" icon="check">
+    - [ ] Create golden files for generated output
+    - [ ] Support `-update` flag to refresh
+    - [ ] Test across all agent adapters
+  </Card>
+  
+  <Card title="E2E Tests" icon="check">
+    - [ ] Add to `e2e/e2e_test.sh`
+    - [ ] Use `log_test`, `log_pass`, `log_fail`
+    - [ ] Test on both Ubuntu and Arch
+    - [ ] Choose correct tier (1/2/3)
+  </Card>
+</CardGroup>
+
+### Example: Adding a New Agent Adapter Test
+
+```go
+// internal/agents/newagentagent_test.go
+
+package newagent_test
+
+import (
+    "testing"
+    "github.com/gentleman-programming/gentle-ai/internal/agents/newagent"
+    "github.com/gentleman-programming/gentle-ai/internal/model"
+)
+
+func TestNewAgentAdapter_SkillsDir(t *testing.T) {
+    adapter := newagent.NewAdapter()
+    homeDir := "/home/user"
+    
+    got := adapter.SkillsDir(homeDir)
+    want := "/home/user/.newagent/skills"
+    
+    if got != want {
+        t.Errorf("SkillsDir() = %q, want %q", got, want)
+    }
+}
+
+func TestNewAgentAdapter_SystemPromptStrategy(t *testing.T) {
+    adapter := newagent.NewAdapter()
+    
+    got := adapter.SystemPromptStrategy()
+    want := model.StrategyFileReplace
+    
+    if got != want {
+        t.Errorf("SystemPromptStrategy() = %v, want %v", got, want)
+    }
+}
+
+func TestNewAgentAdapter_SupportedFeatures(t *testing.T) {
+    adapter := newagent.NewAdapter()
+    
+    tests := []struct{
+        name string
+        fn   func() bool
+        want bool
+    }{
+        {"Skills", adapter.SupportsSkills, true},
+        {"MCP", adapter.SupportsMCP, true},
+        {"System Prompt", adapter.SupportsSystemPrompt, true},
+        {"Output Styles", adapter.SupportsOutputStyles, false},
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            if got := tt.fn(); got != tt.want {
+                t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
+            }
+        })
+    }
+}
+```
+
+## Debugging Tests
+
+### Verbose Output
+
+```bash
+go test -v ./internal/agents/claude
+```
+
+### Run Single Test
+
+```bash
+go test ./internal/agents/claude -run TestClaudeAdapter_SkillsDir
+```
+
+### Print Debug Info
+
+```go
+func TestDebug(t *testing.T) {
+    t.Logf("Debug info: %v", someValue)
+    t.Logf("Path: %s", filepath)
+}
+```
+
+### Test Coverage Report
+
+```bash
+go test -coverprofile=coverage.out ./...
+go tool cover -html=coverage.out
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Fast Tests" icon="bolt">
+    Keep unit tests fast (under 100ms)
+    
+    Use mocks for external dependencies
+  </Card>
+  
+  <Card title="Isolated Tests" icon="box">
+    Tests should not depend on each other
+    
+    Use `t.TempDir()` for filesystem tests
+  </Card>
+  
+  <Card title="Clear Names" icon="tag">
+    `Test<Type>_<Method>_<Scenario>`
+    
+    Descriptive test names explain intent
+  </Card>
+  
+  <Card title="Table-Driven" icon="table">
+    Use table-driven tests for multiple cases
+    
+    Makes adding new cases easy
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Build Guide" href="/development/building" icon="hammer">
+    Learn how to build binaries and create releases
+  </Card>
+  <Card title="Architecture" href="/development/architecture" icon="sitemap">
+    Understand the codebase structure
+  </Card>
+</CardGroup>

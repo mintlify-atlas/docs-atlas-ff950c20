@@ -1,0 +1,247 @@
+---
+title: "Claude Code"
+description: "Full-featured CLI agent with markdown-based configuration and output styles"
+---
+
+Claude Code is a CLI agent that receives full Gentle AI ecosystem support, including skills, MCP servers, output styles, and markdown-section-based system prompt injection.
+
+## Support Tier
+
+**Full** — Claude Code receives the complete SDD orchestrator, skill files, MCP integration, system prompt injection, and sub-agent delegation.
+
+## Configuration Paths
+
+### Primary Config Directory
+```bash
+~/.claude/
+```
+
+### File Locations
+
+| Purpose | Path |
+|---------|------|
+| System Prompt | `~/.claude/CLAUDE.md` |
+| Skills Directory | `~/.claude/skills/` |
+| Settings File | `~/.claude/settings.json` |
+| MCP Configs | `~/.claude/mcp/` |
+| Output Styles | `~/.claude/output-styles/` |
+
+### Windows Paths
+```powershell
+%USERPROFILE%\.claude\CLAUDE.md
+%USERPROFILE%\.claude\skills\sdd-init.md
+%USERPROFILE%\.claude\mcp\context7.json
+```
+
+## Configuration Strategies
+
+### System Prompt: Markdown Sections
+
+Claude Code uses **marker-based injection** to insert Gentle AI content into `CLAUDE.md` without overwriting user customizations.
+
+Gentle AI injects content between markers:
+```markdown
+<!-- gentle-ai:sdd-orchestration -->
+[SDD orchestration instructions]
+<!-- /gentle-ai:sdd-orchestration -->
+
+<!-- gentle-ai:persona -->
+[Persona instructions]
+<!-- /gentle-ai:persona -->
+```
+
+<Info>
+User content outside these markers is preserved. You can safely add custom instructions before or after Gentle AI sections.
+</Info>
+
+### MCP: Separate Files
+
+Claude Code stores each MCP server in a separate JSON file under `~/.claude/mcp/`.
+
+**Example: Context7 MCP Server**
+```json
+// ~/.claude/mcp/context7.json
+{
+  "command": "npx",
+  "args": ["-y", "@context-labs/mcp-server-context7"],
+  "env": {
+    "CONTEXT7_API_KEY": "your-api-key"
+  }
+}
+```
+
+**Example: Engram MCP Server**
+```json
+// ~/.claude/mcp/engram.json
+{
+  "command": "npx",
+  "args": ["-y", "@gentleman-programming/mcp-server-engram"],
+  "env": {}
+}
+```
+
+## Capabilities
+
+### Skills ✅
+
+Skills are written to `~/.claude/skills/` as markdown files:
+
+```bash
+~/.claude/skills/
+├── sdd-init.md
+├── sdd-explore.md
+├── sdd-propose.md
+├── sdd-spec.md
+├── sdd-design.md
+├── sdd-tasks.md
+├── sdd-apply.md
+├── sdd-verify.md
+├── sdd-archive.md
+├── go-testing.md
+└── skill-creator.md
+```
+
+### MCP Servers ✅
+
+MCP servers are configured in `~/.claude/mcp/` with one JSON file per server. Gentle AI configures:
+
+- **Context7** — Live framework/library documentation
+- **Engram** — Persistent cross-session memory
+
+### Sub-agents ✅
+
+Claude Code supports native sub-agent delegation. The SDD orchestrator uses sub-agents for parallel task execution.
+
+### Output Styles ✅
+
+Claude Code is the **only agent** that supports custom output styles via `~/.claude/output-styles/`.
+
+Gentle AI can optionally install the **Gentleman Kanagawa theme** for terminal output styling.
+
+### Slash Commands ❌
+
+Claude Code does not support slash commands. Use OpenCode if you need slash command support.
+
+## Installation
+
+### Auto-Install Support ✅
+
+Gentle AI can automatically install Claude Code if it's not already present.
+
+**Detection Method:** Checks for `claude` binary on PATH.
+
+### Installation Commands (by Platform)
+
+<Tabs>
+  <Tab title="macOS">
+    ```bash
+    # Homebrew (preferred)
+    brew install claude-code
+    
+    # Or install via gentle-ai
+    gentle-ai install --agent claude-code
+    ```
+  </Tab>
+  
+  <Tab title="Linux (Debian/Ubuntu)">
+    ```bash
+    # NPM global install
+    npm install -g @anthropic-ai/claude-code
+    
+    # Or install via gentle-ai
+    gentle-ai install --agent claude-code
+    ```
+  </Tab>
+  
+  <Tab title="Linux (Arch)">
+    ```bash
+    # NPM global install
+    npm install -g @anthropic-ai/claude-code
+    
+    # Or install via gentle-ai
+    gentle-ai install --agent claude-code
+    ```
+  </Tab>
+  
+  <Tab title="Windows">
+    ```powershell
+    # NPM global install
+    npm install -g @anthropic-ai/claude-code
+    
+    # Or install via gentle-ai
+    gentle-ai.exe install --agent claude-code
+    ```
+  </Tab>
+</Tabs>
+
+## Example Configuration
+
+### Full Gentleman Preset
+
+```bash
+gentle-ai install \
+  --agent claude-code \
+  --preset full-gentleman
+```
+
+This installs:
+- ✅ All SDD skills (9 files)
+- ✅ Foundation skills (go-testing, skill-creator)
+- ✅ Context7 + Engram MCP servers
+- ✅ Gentleman persona
+- ✅ Permissions + security defaults
+- ✅ Theme overlay (optional)
+- ✅ GGA integration (optional)
+
+### Ecosystem Only
+
+```bash
+gentle-ai install \
+  --agent claude-code \
+  --preset ecosystem-only
+```
+
+This installs:
+- ✅ P0 skills only (critical SDD workflow)
+- ✅ Context7 + Engram MCP servers
+- ✅ Gentleman persona
+- ✅ Permissions + security defaults
+
+### Custom Configuration
+
+```bash
+gentle-ai install \
+  --agent claude-code \
+  --component engram,sdd,skills,context7 \
+  --skill sdd-init,sdd-explore,sdd-propose,go-testing \
+  --persona neutral
+```
+
+## Implementation Details
+
+**Source Code:** `internal/agents/claude/adapter.go`
+
+**Agent ID:** `claude-code`
+
+**Support Tier:** `TierFull`
+
+**System Prompt Strategy:** `StrategyMarkdownSections`
+
+**MCP Strategy:** `StrategySeparateMCPFiles`
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation Guide" icon="download" href="/installation">
+    Install Gentle AI and configure Claude Code
+  </Card>
+  <Card title="Components" icon="cube" href="/components/engram">
+    Learn about the Gentle AI component ecosystem
+  </Card>
+  <Card title="Skills" icon="brain" href="/components/skills">
+    Explore SDD and foundation skills
+  </Card>
+  <Card title="MCP Servers" icon="plug" href="/components/context7">
+    Configure Context7 and Engram
+  </Card>
+</CardGroup>

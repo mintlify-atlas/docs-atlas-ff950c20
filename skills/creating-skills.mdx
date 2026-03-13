@@ -1,0 +1,765 @@
+---
+title: Creating Skills
+description: Write custom skills following the Agent Skills spec
+---
+
+# Creating Skills
+
+This guide teaches you how to create custom skills that AI agents can load and follow. Skills are structured markdown files that provide just-in-time instructions for specific tasks.
+
+## When to Create a Skill
+
+### Good Candidates
+
+<CardGroup cols={2}>
+  <Card title="Repeated Patterns" icon="repeat">
+    You've explained the same pattern 3+ times to the AI agent.
+  </Card>
+  <Card title="Project Conventions" icon="book">
+    Your team has specific rules that differ from generic best practices.
+  </Card>
+  <Card title="Complex Workflows" icon="diagram-project">
+    Multi-step processes with decision points.
+  </Card>
+  <Card title="Framework-Specific" icon="code">
+    Using features not in the AI's training data (e.g., React 19).
+  </Card>
+</CardGroup>
+
+### Not a Good Fit
+
+- **One-off tasks**: Won't be repeated
+- **Well-documented**: Official docs already cover it thoroughly
+- **Trivial**: Self-explanatory from the code
+- **Constantly changing**: Pattern isn't stable yet
+
+## Skill File Structure
+
+### Directory Layout
+
+```
+skills/{skill-name}/
+├── SKILL.md              # Required - main skill file
+├── assets/               # Optional - templates, schemas, examples
+│   ├── template.py
+│   ├── schema.json
+│   └── example.yaml
+└── references/           # Optional - links to local docs
+    └── docs.md           # Points to local documentation files
+```
+
+### SKILL.md Anatomy
+
+Every skill file has this structure:
+
+```markdown
+---
+name: {skill-name}
+description: >
+  {One-line description of what this skill does}.
+  Trigger: {When the AI should load this skill}.
+license: Apache-2.0
+metadata:
+  author: {your-name or organization}
+  version: "1.0"
+allowed-tools: Read, Edit, Write, Bash  # Optional: restrict tool usage
+---
+
+## When to Use
+
+{Bullet points describing trigger conditions}
+
+## Critical Patterns
+
+{The most important rules - what AI MUST know}
+
+## Decision Tree
+
+{Tables or flowcharts for choosing approaches}
+
+## Code Examples
+
+{Minimal, focused code samples}
+
+## Commands
+
+```bash
+{Copy-paste terminal commands}
+```
+
+## Resources
+
+- **Templates**: See `assets/` for templates
+- **Documentation**: See `references/` for local docs
+```
+
+## Frontmatter Fields
+
+### Required Fields
+
+| Field | Format | Purpose |
+|-------|--------|----------|
+| `name` | `lowercase-with-hyphens` | Unique identifier for the skill |
+| `description` | Multi-line YAML string | What the skill does + trigger keywords |
+| `license` | SPDX identifier | Always `Apache-2.0` or `MIT` |
+| `metadata.author` | String | Your name or `gentleman-programming` |
+| `metadata.version` | String (quoted) | Semantic version: `"1.0"`, `"2.1"`, etc. |
+
+### Optional Fields
+
+| Field | Format | Purpose |
+|-------|--------|----------|
+| `allowed-tools` | Comma-separated list | Restrict which tools agents can use |
+| `metadata.tags` | Array | Additional categorization |
+| `metadata.project` | String | Project this skill belongs to |
+
+### Critical: Trigger Keywords
+
+The `description` field MUST include **trigger keywords** that help agents decide when to load the skill:
+
+```yaml
+---
+name: react-19
+description: >
+  React 19 patterns including useActionState, useOptimistic, and form actions.
+  Trigger: When using React 19, form actions, useActionState, useOptimistic, or server actions.
+---
+```
+
+**Good triggers**: Specific technology names, function names, feature names
+
+**Bad triggers**: Generic terms like "frontend", "testing", "code"
+
+## Naming Conventions
+
+### Patterns
+
+| Type | Pattern | Examples |
+|------|---------|----------|
+| Generic skill | `{technology}` | `pytest`, `playwright`, `typescript`, `tailwind` |
+| Version-specific | `{technology}-{version}` | `react-19`, `go-1-23`, `python-3-12` |
+| Project-specific | `{project}-{component}` | `myapp-api`, `myapp-ui`, `dotfiles-installer` |
+| Testing skill | `{project}-test-{component}` | `myapp-test-sdk`, `myapp-test-api`, `e2e-flows` |
+| Workflow skill | `{action}-{target}` | `skill-creator`, `jira-task`, `pr-review`, `deploy-prod` |
+
+### Naming Rules
+
+- **Use lowercase**: Never uppercase or camelCase
+- **Use hyphens**: Never underscores (`skill_name` ❌)
+- **Be specific**: `react-19` not just `react`
+- **Be concise**: 2-3 words maximum
+- **Avoid spaces**: Even in directory names
+
+## Content Sections
+
+### 1. When to Use
+
+**Purpose**: Trigger conditions for loading this skill
+
+**Format**: Bullet list
+
+**Example**:
+
+```markdown
+## When to Use
+
+- Writing React 19 components with form actions
+- Using `useActionState` or `useOptimistic` hooks
+- Implementing server actions in Next.js 15+
+- Adding optimistic updates to forms
+```
+
+### 2. Critical Patterns
+
+**Purpose**: The "must know" rules that AI agents should never violate
+
+**Format**: Numbered or bulleted list with sub-sections
+
+**Example**:
+
+```markdown
+## Critical Patterns
+
+### Pattern 1: Always Use useActionState for Form Actions
+
+Never use plain `action` props with async functions. Always wrap in `useActionState`:
+
+```tsx
+// ❌ BAD: Plain async function
+<form action={async () => { ... }}>
+
+// ✔ GOOD: Wrapped in useActionState
+const [state, action] = useActionState(myServerAction, initialState);
+<form action={action}>
+```
+
+### Pattern 2: Optimistic Updates Go Inside useOptimistic
+
+...
+```
+
+### 3. Decision Tree
+
+**Purpose**: Help AI choose between alternatives
+
+**Format**: ASCII tree or table
+
+**Example (ASCII tree)**:
+
+```markdown
+## Decision Tree
+
+```
+Need form submission?
+├── Simple form? → Use useActionState
+├── Need optimistic updates? → Combine useActionState + useOptimistic
+├── Multi-step form? → Use useActionState with state machine
+└── File upload? → Use FormData with useActionState
+```
+```
+
+**Example (table)**:
+
+```markdown
+## Decision Tree
+
+| Situation | Solution | Why |
+|-----------|----------|-----|
+| Simple form submission | `useActionState` | Built-in pending/error states |
+| Need instant UI feedback | `useActionState` + `useOptimistic` | Update UI before server confirms |
+| File upload | `FormData` in server action | Handles multipart/form-data |
+| Multi-step wizard | State machine pattern | Track progress, validate steps |
+```
+
+### 4. Code Examples
+
+**Purpose**: Show correct implementation patterns
+
+**Format**: Fenced code blocks with language tags
+
+**Guidelines**:
+- **Keep examples small**: 10-20 lines max
+- **Focus on one thing**: One pattern per example
+- **Include comments**: Explain non-obvious parts
+- **Show good vs. bad**: Use ❌ and ✔ markers
+
+**Example**:
+
+```markdown
+## Code Examples
+
+### Example 1: Basic Form Action
+
+```tsx
+'use client';
+import { useActionState } from 'react';
+import { submitForm } from './actions';
+
+export function ContactForm() {
+  const [state, action] = useActionState(submitForm, { message: '' });
+
+  return (
+    <form action={action}>
+      <input name="email" type="email" required />
+      <button type="submit">Submit</button>
+      {state.message && <p>{state.message}</p>}
+    </form>
+  );
+}
+```
+
+### Example 2: Optimistic Update
+
+```tsx
+import { useOptimistic } from 'react';
+
+export function TodoList({ todos }) {
+  const [optimisticTodos, addOptimisticTodo] = useOptimistic(
+    todos,
+    (state, newTodo) => [...state, { ...newTodo, pending: true }]
+  );
+
+  const [state, action] = useActionState(createTodo, null);
+
+  const handleSubmit = async (formData) => {
+    addOptimisticTodo({ title: formData.get('title') });
+    await action(formData);
+  };
+
+  return (
+    <>
+      {optimisticTodos.map(todo => (
+        <li key={todo.id} style={{ opacity: todo.pending ? 0.5 : 1 }}>
+          {todo.title}
+        </li>
+      ))}
+      <form action={handleSubmit}>
+        <input name="title" />
+        <button>Add</button>
+      </form>
+    </>
+  );
+}
+```
+```
+
+### 5. Commands
+
+**Purpose**: Copy-paste terminal commands for common operations
+
+**Format**: Fenced bash code block
+
+**Example**:
+
+```markdown
+## Commands
+
+```bash
+# Run dev server with React 19
+npm run dev
+
+# Run type checker
+npx tsc --noEmit
+
+# Run tests
+npm test
+
+# Build for production
+npm run build
+```
+```
+
+### 6. Resources
+
+**Purpose**: Link to templates, schemas, and local documentation
+
+**Format**: Bullet list with markdown links
+
+**Guidelines**:
+- Prefer **local paths** over web URLs
+- Link to `assets/` for templates and schemas
+- Link to `references/` for local docs
+- Link to project docs in `docs/` if they exist
+
+**Example**:
+
+```markdown
+## Resources
+
+- **Templates**: See `assets/form-action-template.tsx`
+- **Schema**: See `assets/server-action-schema.json`
+- **Documentation**: See `references/react-19-guide.md`
+- **Project Guide**: See [../../docs/developer-guide/react-patterns.mdx](../../docs/developer-guide/react-patterns.mdx)
+```
+
+## assets/ Directory
+
+Use `assets/` for:
+- **Templates**: Starter code (`.tsx`, `.py`, `.go`, etc.)
+- **Schemas**: JSON Schema, OpenAPI, Protobuf
+- **Configs**: Example configuration files
+- **Data**: Sample data for testing
+
+**Example**:
+
+```
+skills/react-19/assets/
+├── form-action-template.tsx
+├── server-action-schema.json
+├── optimistic-update-pattern.tsx
+└── example-form-data.json
+```
+
+## references/ Directory
+
+Use `references/` for:
+- Links to LOCAL documentation files
+- Pointers to project-specific guides
+- References to internal wikis or docs sites
+
+**Key Rule**: `references/` should NOT link to external web URLs. Use local paths.
+
+**Example**:
+
+```
+skills/react-19/references/
+└── docs.md
+```
+
+**docs.md**:
+```markdown
+# React 19 References
+
+## Internal Docs
+
+- [React Patterns Guide](../../docs/developer-guide/react-patterns.mdx)
+- [Form Handling Best Practices](../../docs/developer-guide/forms.mdx)
+- [API Integration Patterns](../../docs/developer-guide/api-integration.mdx)
+
+## Project Conventions
+
+- [AGENTS.md](../../AGENTS.md) - Agent configuration
+- [.cursorrules](../../.cursorrules) - Cursor IDE rules
+```
+
+## Registering the Skill
+
+After creating a skill, register it in your project's agent configuration:
+
+### For AGENTS.md
+
+Add a row to the skills table:
+
+```markdown
+## Available Skills
+
+| Skill | Description | Path |
+|-------|-------------|------|
+| `react-19` | React 19 form actions and hooks | [SKILL.md](skills/react-19/SKILL.md) |
+| `myapp-api` | MyApp API conventions | [SKILL.md](skills/myapp-api/SKILL.md) |
+```
+
+### For .cursorrules
+
+Add a skill reference:
+
+```markdown
+# Custom Skills
+
+- React 19 patterns: See `skills/react-19/SKILL.md`
+- MyApp API conventions: See `skills/myapp-api/SKILL.md`
+```
+
+### Skill Registry
+
+If using SDD, regenerate the skill registry:
+
+```bash
+# In your AI conversation
+"Run /skill-registry to update the skill catalog"
+```
+
+This scans all skill directories and updates `.atl/skill-registry.md`.
+
+## Content Guidelines
+
+### DO
+
+- **Start with critical patterns**: Most important rules first
+- **Use tables**: Great for decision trees and comparisons
+- **Keep examples minimal**: 10-20 lines max per example
+- **Include commands**: Copy-paste terminal commands
+- **Reference local docs**: Link to project documentation
+- **Use concrete examples**: Real code, not pseudocode
+- **Explain non-obvious**: Add comments for tricky parts
+
+### DON'T
+
+- **Add Keywords section**: Agents search frontmatter, not body
+- **Duplicate existing docs**: Link to official docs instead
+- **Write lengthy explanations**: Skills are references, not tutorials
+- **Add troubleshooting**: Keep focused on correct patterns
+- **Use web URLs in references**: Prefer local paths
+- **Make it a tutorial**: It's a reference card, not a guide
+- **Include every edge case**: Cover 80% of use cases
+
+## Testing Your Skill
+
+### 1. Validate Frontmatter
+
+Check that YAML frontmatter is valid:
+
+```bash
+# Install yq (YAML processor)
+brew install yq  # macOS
+
+# Validate frontmatter
+head -n 20 skills/react-19/SKILL.md | yq eval - -
+```
+
+Should output parsed YAML without errors.
+
+### 2. Test Trigger Keywords
+
+Ask your AI agent:
+
+```
+"I need to implement a form with React 19 useActionState"
+```
+
+Check if it loads your skill. If not, add more specific triggers to `description`.
+
+### 3. Verify Examples Compile
+
+Copy code examples to a test file and run:
+
+```bash
+# TypeScript/React
+npx tsc --noEmit example.tsx
+
+# Go
+go build example.go
+
+# Python
+python -m py_compile example.py
+```
+
+Fix any syntax errors.
+
+### 4. Check Links
+
+Verify all links in Resources section exist:
+
+```bash
+# Extract markdown links
+grep -o '\[.*\](.*\.md)' skills/react-19/SKILL.md
+
+# Check if files exist
+ls skills/react-19/assets/
+ls skills/react-19/references/
+```
+
+## Distributing Skills
+
+### User-Level Skills (Personal)
+
+Install to your agent's global skills directory:
+
+```bash
+# Claude Code
+cp -r skills/react-19 ~/.config/claude-code/skills/
+
+# OpenCode
+cp -r skills/react-19 ~/.config/opencode/skills/
+
+# Cursor
+cp -r skills/react-19 ~/.cursor/skills/
+```
+
+### Project-Level Skills (Team)
+
+Commit to version control:
+
+```bash
+# Create skills directory in project root
+mkdir -p skills
+
+# Add your skill
+cp -r ~/my-skill skills/
+
+# Commit
+git add skills/
+git commit -m "Add my-skill for X"
+git push
+```
+
+Team members get the skill when they clone/pull.
+
+### Sharing with Community
+
+Create a GitHub repo:
+
+```bash
+mkdir ai-skills
+cd ai-skills
+git init
+
+# Add your skills
+cp -r ~/skills/* .
+
+# Add README
+cat > README.md << 'EOF'
+# My AI Skills
+
+Collection of custom skills for AI agents.
+
+## Installation
+
+```bash
+# Clone to your agent's skills directory
+git clone https://github.com/yourusername/ai-skills ~/.config/opencode/skills/my-skills
+```
+EOF
+
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/yourusername/ai-skills
+git push -u origin main
+```
+
+## FAQ
+
+<Accordion title="How many skills should I create?">
+  Start small. Create 1-2 skills for your most repeated patterns. Add more as you identify clear use cases. Too many skills can overwhelm agents.
+</Accordion>
+
+<Accordion title="Can I include diagrams in skills?">
+  Yes! Use ASCII art for simple diagrams, or link to image files in `assets/`. Keep diagrams simple—complex visuals don't help AI agents much.
+</Accordion>
+
+<Accordion title="Should skills be versioned?">
+  Yes. Use semantic versioning in `metadata.version`. When you make breaking changes, bump the major version (`1.0` → `2.0`).
+</Accordion>
+
+<Accordion title="What if my skill is too long?">
+  Split it. If a skill exceeds 500 lines, it's probably covering multiple patterns. Break into separate skills (e.g., `react-19-forms` and `react-19-optimistic`).
+</Accordion>
+
+<Accordion title="Can I reference other skills?">
+Yes! Use relative paths like `[go-testing skill](../go-testing/SKILL.md)` to link to other skills for additional context.
+</Accordion>
+
+## Example: Complete Skill
+
+Here's a complete example skill:
+
+**skills/jira-task/SKILL.md**:
+
+```markdown
+---
+name: jira-task
+description: >
+  Create Jira tasks with proper formatting and required fields.
+  Trigger: When creating Jira issues, writing Jira descriptions, or formatting Jira tasks.
+license: Apache-2.0
+metadata:
+  author: mycompany
+  version: "1.0"
+---
+
+## When to Use
+
+- Creating new Jira tasks
+- Formatting Jira descriptions
+- Adding acceptance criteria to stories
+- Writing bug reports in Jira
+
+## Critical Patterns
+
+### Pattern 1: Always Include Acceptance Criteria
+
+Every story MUST have acceptance criteria using Given/When/Then format:
+
+```
+h3. Acceptance Criteria
+
+*Scenario 1: User logs in successfully*
+- *Given* the user has valid credentials
+- *When* they submit the login form
+- *Then* they should be redirected to the dashboard
+```
+
+### Pattern 2: Use Jira Markdown Syntax
+
+Jira uses textile markup, not standard markdown:
+
+| Format | Textile | Markdown (don't use) |
+|--------|---------|----------------------|
+| Bold | `*bold*` | `**bold**` |
+| Italic | `_italic_` | `*italic*` |
+| Code | `{{code}}` | \`code\` |
+| Heading | `h3. Title` | `### Title` |
+
+## Decision Tree
+
+```
+What type of Jira issue?
+├── Story? → Include acceptance criteria (mandatory)
+├── Bug? → Include steps to reproduce (mandatory)
+├── Task? → Include checklist of deliverables
+└── Spike? → Include questions to answer and time-box
+```
+
+## Code Examples
+
+### Example 1: Story Description
+
+```
+h2. User Story
+
+As a *user*, I want to reset my password so that I can regain access to my account.
+
+h3. Acceptance Criteria
+
+*Scenario 1: Request password reset*
+- *Given* the user is on the login page
+- *When* they click "Forgot Password"
+- *Then* they should see a password reset form
+
+*Scenario 2: Receive reset email*
+- *Given* the user submitted the reset form
+- *When* they provide a valid email
+- *Then* they should receive a reset link via email
+
+h3. Technical Notes
+
+- Use existing {{EmailService}} for sending
+- Reset links expire after 1 hour
+- Rate limit: 3 requests per hour per email
+```
+
+### Example 2: Bug Report
+
+```
+h2. Bug Description
+
+Login form crashes when email field is empty.
+
+h3. Steps to Reproduce
+
+# Navigate to login page
+# Leave email field empty
+# Enter password
+# Click "Submit"
+
+h3. Expected Behavior
+
+Show validation error: "Email is required"
+
+h3. Actual Behavior
+
+App crashes with `TypeError: Cannot read property 'includes' of undefined`
+
+h3. Environment
+
+- Browser: Chrome 121
+- OS: macOS 14.2
+- App version: 2.3.1
+```
+
+## Commands
+
+```bash
+# Create Jira issue via CLI (if available)
+jira create --project MYPROJ --type Story --summary "Add dark mode"
+
+# Search existing issues
+jira search "project = MYPROJ AND status = 'In Progress'"
+
+# Transition issue
+jira transition MYPROJ-123 "Done"
+```
+
+## Resources
+
+- **Template**: See `assets/story-template.txt`
+- **Bug Template**: See `assets/bug-template.txt`
+- **Jira Formatting**: See `references/jira-textile.md`
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Skills Overview" icon="book" href="/skills/overview">
+    Understand the skill system and discovery mechanisms
+  </Card>
+  <Card title="SDD Workflow Skills" icon="diagram-project" href="/skills/sdd-workflow">
+    Study the 9 SDD skills as examples of complex workflows
+  </Card>
+  <Card title="Foundation Skills" icon="vial" href="/skills/foundation">
+    See go-testing and skill-creator for real-world examples
+  </Card>
+  <Card title="Skills Component" icon="code" href="/components/skills">
+    Technical details on skill installation and loading
+  </Card>
+</CardGroup>
